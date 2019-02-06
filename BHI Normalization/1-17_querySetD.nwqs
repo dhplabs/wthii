@@ -1,0 +1,286 @@
+<QuerySet>
+  <Query IsView="False" IsSP="False">
+    <File>../../../BHI%20code/BHI_GEM_xwalks.sql</File>
+    <Name>BHI_GEM_xwalks</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <SQL> 
+ 
+select	count(*)
+from	whaight.em_dehydration
+--LIMIT 100
+;	--	39,158
+ 
+select	count(*)
+from	whaight.em_nstemi
+--LIMIT 100
+;	--	84,478
+ 
+select	count(*)
+from	whaight.em_respiratoryfail
+--LIMIT 100
+;	--	30,302
+ 
+select	count(*)
+from	whaight.em_sepsis
+--LIMIT 100
+;	--	31,215
+ 
+CREATE TABLE	whaight.em_sepsis	AS
+(	SELECT	*
+	FROM	aprivett.em_sepsis
+);
+
+CREATE TABLE	whaight.em_dehydration	AS
+(	SELECT	*
+	FROM	aprivett.em_dehydration
+);
+
+CREATE TABLE	whaight.em_nstemi	AS
+(	SELECT	*
+	FROM	aprivett.em_nstemi
+);
+
+CREATE TABLE	whaight.em_respiratoryfail	AS
+(	SELECT	*
+	FROM	aprivett.em_respiratoryfail
+);
+
+
+
+/*	1 revised: em_sepsis	*/
+SELECT		one.CODE		hcpcs_code_1
+		,	one.FREQ		freq_1
+		,	one.RELFREQ		rel_freq_1
+		,	two.CODE		hcpcs_code_2
+		,	two.FREQ		freq_2
+		,	two.RELFREQ		rel_freq_1
+FROM		(	WITH	clm	AS
+							(		SELECT DISTINCT		claim_ID
+													,	member_ID
+									FROM			whaight.BHI_ED_Facility_claims_clean_icd10_alt_reduced
+								UNION
+									SELECT DISTINCT		claim_ID
+													,	member_ID
+									FROM			whaight.BHI_ED_Professional_claims_clean_icd10_alt_reduced
+							)
+					,	tot	AS
+							(	SELECT	COUNT( * )	TOTAL
+								FROM	whaight.em_sepsis
+							)
+				SELECT DISTINCT		em.cpt_hcpcs_code								CODE
+								,	COUNT( em.cpt_hcpcs_code )						FREQ
+								,	1.0 * COUNT( em.cpt_hcpcs_code ) / tot.TOTAL	RELFREQ
+				FROM						whaight.em_sepsis	em
+									JOIN						clm
+									ON			em.claim_ID		=	clm.claim_ID
+											AND	em.member_ID	=	clm.member_ID
+								,	tot
+				GROUP BY			em.cpt_hcpcs_code
+								,	tot.TOTAL
+				ORDER BY		FREQ	DESC
+			)	one
+		,	(	WITH
+					tot	AS
+						(	SELECT	COUNT( * )	TOTAL
+							FROM	whaight.em_sepsis
+						)
+				SELECT DISTINCT		em.cpt_hcpcs_code								CODE
+								,	COUNT( em.cpt_hcpcs_code )						FREQ
+								,	1.0 * COUNT( em.cpt_hcpcs_code ) / tot.TOTAL	RELFREQ
+				FROM						whaight.em_sepsis			em
+									JOIN	whaight.bhi_all_claims_1nf	clm
+									ON			em.claim_ID		=	clm.claim_ID
+											AND	em.member_ID	=	clm.member_ID
+								,	tot
+				GROUP BY			em.cpt_hcpcs_code
+								,	tot.TOTAL
+				ORDER BY		FREQ	DESC
+			)	two
+WHERE
+	one.CODE	=	two.CODE
+ORDER BY
+	one.FREQ	DESC
+;
+
+
+
+/*	2 revised: em_respiratoryfail	*/
+SELECT		one.CODE		hcpcs_code_1
+		,	one.FREQ		freq_1
+		,	one.RELFREQ		rel_freq_1
+		,	two.CODE		hcpcs_code_2
+		,	two.FREQ		freq_2
+		,	two.RELFREQ		rel_freq_1
+FROM		(	WITH	clm	AS
+							(		SELECT DISTINCT		claim_ID
+													,	member_ID
+									FROM			whaight.BHI_ED_Facility_claims_clean_icd10_alt_reduced
+								UNION
+									SELECT DISTINCT		claim_ID
+													,	member_ID
+									FROM			whaight.BHI_ED_Professional_claims_clean_icd10_alt_reduced
+							)
+					,	tot	AS
+							(	SELECT	COUNT( * )	TOTAL
+								FROM	whaight.em_respiratoryfail
+							)
+				SELECT DISTINCT		em.cpt_hcpcs_code								CODE
+								,	COUNT( em.cpt_hcpcs_code )						FREQ
+								,	1.0 * COUNT( em.cpt_hcpcs_code ) / tot.TOTAL	RELFREQ
+				FROM						whaight.em_respiratoryfail	em
+									JOIN								clm
+									ON			em.claim_ID		=	clm.claim_ID
+											AND	em.member_ID	=	clm.member_ID
+								,	tot
+				GROUP BY			em.cpt_hcpcs_code
+								,	tot.TOTAL
+				ORDER BY		FREQ	DESC
+			)	one
+		,	(	WITH
+					tot	AS
+						(	SELECT	COUNT( * )	TOTAL
+							FROM	whaight.em_sepsis
+						)
+				SELECT DISTINCT		em.cpt_hcpcs_code								CODE
+								,	COUNT( em.cpt_hcpcs_code )						FREQ
+								,	1.0 * COUNT( em.cpt_hcpcs_code ) / tot.TOTAL	RELFREQ
+				FROM						whaight.em_respiratoryfail	em
+									JOIN	whaight.bhi_all_claims_1nf	clm
+									ON			em.claim_ID		=	clm.claim_ID
+											AND	em.member_ID	=	clm.member_ID
+								,	tot
+				GROUP BY			em.cpt_hcpcs_code
+								,	tot.TOTAL
+				ORDER BY		FREQ	DESC
+			)	two
+WHERE
+	one.CODE	=	two.CODE
+ORDER BY
+	one.FREQ	DESC
+;
+
+
+
+/*	3 revised: em_nstemi	*/
+SELECT		one.CODE		hcpcs_code_1
+		,	one.FREQ		freq_1
+		,	one.RELFREQ		rel_freq_1
+		,	two.CODE		hcpcs_code_2
+		,	two.FREQ		freq_2
+		,	two.RELFREQ		rel_freq_1
+FROM		(	WITH	clm	AS
+							(		SELECT DISTINCT		claim_ID
+													,	member_ID
+									FROM			whaight.BHI_ED_Facility_claims_clean_icd10_alt_reduced
+								UNION
+									SELECT DISTINCT		claim_ID
+													,	member_ID
+									FROM			whaight.BHI_ED_Professional_claims_clean_icd10_alt_reduced
+							)
+					,	tot	AS
+							(	SELECT	COUNT( * )	TOTAL
+								FROM	whaight.em_nstemi
+							)
+				SELECT DISTINCT		em.cpt_hcpcs_code								CODE
+								,	COUNT( em.cpt_hcpcs_code )						FREQ
+								,	1.0 * COUNT( em.cpt_hcpcs_code ) / tot.TOTAL	RELFREQ
+				FROM						whaight.em_nstemi	em
+									JOIN						clm
+									ON			em.claim_ID		=	clm.claim_ID
+											AND	em.member_ID	=	clm.member_ID
+								,	tot
+				GROUP BY			em.cpt_hcpcs_code
+								,	tot.TOTAL
+				ORDER BY		FREQ	DESC
+			)	one
+		,	(	WITH
+					tot	AS
+						(	SELECT	COUNT( * )	TOTAL
+							FROM	whaight.em_sepsis
+						)
+				SELECT DISTINCT		em.cpt_hcpcs_code								CODE
+								,	COUNT( em.cpt_hcpcs_code )						FREQ
+								,	1.0 * COUNT( em.cpt_hcpcs_code ) / tot.TOTAL	RELFREQ
+				FROM						whaight.em_nstemi			em
+									JOIN	whaight.bhi_all_claims_1nf	clm
+									ON			em.claim_ID		=	clm.claim_ID
+											AND	em.member_ID	=	clm.member_ID
+								,	tot
+				GROUP BY			em.cpt_hcpcs_code
+								,	tot.TOTAL
+				ORDER BY		FREQ	DESC
+			)	two
+WHERE
+	one.CODE	=	two.CODE
+ORDER BY
+	one.FREQ	DESC
+;
+
+
+
+/*	4 revised: em_dehydration	*/
+SELECT		one.CODE		hcpcs_code_1
+		,	one.FREQ		freq_1
+		,	one.RELFREQ		rel_freq_1
+		,	two.CODE		hcpcs_code_2
+		,	two.FREQ		freq_2
+		,	two.RELFREQ		rel_freq_1
+FROM		(	WITH	clm	AS
+							(		SELECT DISTINCT		claim_ID
+													,	member_ID
+									FROM			whaight.BHI_ED_Facility_claims_clean_icd10_alt_reduced
+								UNION
+									SELECT DISTINCT		claim_ID
+													,	member_ID
+									FROM			whaight.BHI_ED_Professional_claims_clean_icd10_alt_reduced
+							)
+					,	tot	AS
+							(	SELECT	COUNT( * )	TOTAL
+								FROM	whaight.em_dehydration
+							)
+				SELECT DISTINCT		em.cpt_hcpcs_code								CODE
+								,	COUNT( em.cpt_hcpcs_code )						FREQ
+								,	1.0 * COUNT( em.cpt_hcpcs_code ) / tot.TOTAL	RELFREQ
+				FROM						whaight.em_dehydration	em
+									JOIN							clm
+									ON			em.claim_ID		=	clm.claim_ID
+											AND	em.member_ID	=	clm.member_ID
+								,	tot
+				GROUP BY			em.cpt_hcpcs_code
+								,	tot.TOTAL
+				ORDER BY		FREQ	DESC
+			)	one
+		,	(	WITH
+					tot	AS
+						(	SELECT	COUNT( * )	TOTAL
+							FROM	whaight.em_sepsis
+						)
+				SELECT DISTINCT		em.cpt_hcpcs_code								CODE
+								,	COUNT( em.cpt_hcpcs_code )						FREQ
+								,	1.0 * COUNT( em.cpt_hcpcs_code ) / tot.TOTAL	RELFREQ
+				FROM						whaight.em_dehydration		em
+									JOIN	whaight.bhi_all_claims_1nf	clm
+									ON			em.claim_ID		=	clm.claim_ID
+											AND	em.member_ID	=	clm.member_ID
+								,	tot
+				GROUP BY			em.cpt_hcpcs_code
+								,	tot.TOTAL
+				ORDER BY		FREQ	DESC
+			)	two
+WHERE
+	one.CODE	=	two.CODE
+ORDER BY
+	one.FREQ	DESC
+;
+
+
+
+</SQL>
+    <Name>Tab 1</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <File>../../Carls_question.sql</File>
+    <Name>Carls_question</Name>
+  </Query>
+</QuerySet>

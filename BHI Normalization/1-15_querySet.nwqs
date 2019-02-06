@@ -1,0 +1,580 @@
+<QuerySet>
+  <Query IsView="False" IsSP="False">
+    <File>BHI_ED_common_info.sql</File>
+    <Name>BHI_ED_common_info</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <File>BHI_Adv_Norm_1.sql</File>
+    <Name>BHI_Adv_Norm_1</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <File>BHI_ED_claims_flat.sql</File>
+    <Name>BHI_ED_claims_flat</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <File>../../../BHI%20code/BHI_GEM_xwalks.sql</File>
+    <Name>BHI_GEM_xwalks</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <File>BHI_Adv_Norm_2.sql</File>
+    <Name>BHI_Adv_Norm_2</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <File>BHI_Normalization-OLD.sql</File>
+    <Name>BHI_Normalization-OLD</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <SQL>/********************************************************************************/
+/*																				*/
+/*	FILE:			BHI_Adv_Norm_2												*/
+/*	PROGRAMMED BY:	Will Haight (wthii)											*/
+/*	DATE:			December 31, 2018											*/
+/*	NOTES:			The following tables are established in this file:			*/
+/*					whaight.BHI_Pro_clm_hdr_clean								*/
+/*					whaight.BHI_Pro_clm_dtl_reduced								*/
+/*					whaight.BHI_Pro_clm_hdr_clean_icd10							*/
+/*					whaight.BHI_Pro_clm_hdr_reduced								*/
+/*					whaight.BHI_Pharm_clm_hdr									*/
+/*					whaight.BHI_Pharm_clm_dtl									*/
+/*					whaight.BHI_all_claims_1NF									*/
+/*																				*/
+/*	MODIFICATIONS																*/
+/*																				*/
+/*		1.	BY:																	*/
+/*			DATE:																*/
+/*			NOTES:																*/
+/*																				*/
+/********************************************************************************/
+
+
+
+/********************************************************************************/
+/*																				*/
+/*	The DROP &amp; CREATE below defines a table of BHI professional claims.  These 	*/
+/*	data were received in the table clean_raw.BHI_Professional_Claims.			*/
+/*																				*/
+/********************************************************************************/
+DROP TABLE IF EXISTS	whaight.BHI_Pro_clm_hdr_clean;
+CREATE TABLE			whaight.BHI_Pro_clm_hdr_clean							--	H	D
+(		claim_ID							VARCHAR( 12 )		ENCODE	ZSTD	--	*	*
+	,	member_ID							VARCHAR( 12 )		ENCODE	ZSTD	--	*	*
+	,	category_Of_Service_Code			VARCHAR(  3 )		ENCODE	ZSTD	--	*
+	,	place_Of_Service_Code				VARCHAR(  2 )		ENCODE	ZSTD	--	*
+	,	claim_Type_Code						VARCHAR(  2 )		ENCODE	ZSTD	--	*
+	,	first_Date_Of_Service				DATE				ENCODE	ZSTD	--	*
+	,	last_Date_Of_Service				DATE				ENCODE	ZSTD	--	*
+	,	primary_ICD9_DX_Code				VARCHAR(  7 )		ENCODE	ZSTD	--	*
+	,	secondary_ICD9_DX_Code1				VARCHAR(  7 )		ENCODE	ZSTD	--	*
+	,	secondary_ICD9_DX_Code2				VARCHAR(  7 )		ENCODE	ZSTD	--	*
+	,	secondary_ICD9_DX_Code3				VARCHAR(  7 )		ENCODE	ZSTD	--	*
+	,	billing_Provider_NPI				VARCHAR( 10 )		ENCODE	ZSTD	--	*
+	,	billing_Provider_Specialty_Code		VARCHAR(  2 )		ENCODE	ZSTD	--	*
+	,	billing_Provider_Zip_Code			VARCHAR(  5 )		ENCODE	ZSTD	--	*
+	,	billing_Provider_Medicare_ID		VARCHAR( 20 )		ENCODE	ZSTD	--	*
+	,	rendering_Provider_NPI				VARCHAR( 10 )		ENCODE	ZSTD	--	*
+	,	rendering_Provider_Specialty_Code	VARCHAR(  2 )		ENCODE	ZSTD	--	*
+	,	rendering_Provider_Type_Code		VARCHAR(  2 )		ENCODE	ZSTD	--	*
+	,	rendering_Provider_Zip_Code			VARCHAR(  5 )		ENCODE	ZSTD	--	*
+	,	ICD_Code_Type						VARCHAR(  1 )		ENCODE	ZSTD	--	*
+	,	primary_ICD10_DX_Code				VARCHAR(  8 )		ENCODE	ZSTD	--	*
+	,	secondary_ICD10_DX_Code1			VARCHAR(  8 )		ENCODE	ZSTD	--	*
+	,	secondary_ICD10_DX_Code2			VARCHAR(  8 )		ENCODE	ZSTD	--	*
+	,	secondary_ICD10_DX_Code3			VARCHAR(  8 )		ENCODE	ZSTD	--	*
+	,	claim_Payment_Status_Code			VARCHAR(  1 )		ENCODE	ZSTD	--	*
+	,	non_Covered_Reason_Code				VARCHAR(  2 )		ENCODE	ZSTD	--	*
+)
+DISTSTYLE KEY
+DISTKEY( member_ID )
+COMPOUND SORTKEY(
+		member_ID
+	,	claim_ID
+	,	rendering_Provider_NPI
+	,	primary_ICD9_DX_Code
+	,	first_Date_Of_Service
+	,	last_Date_Of_Service
+);
+
+
+
+/********************************************************************************/
+/*																				*/
+/*	The INSERT command populates the table defined ablove.  It reads the table	*/
+/*	clean_raw.BHI_Professional_Claims and removes from the ICD DX and procedure	*/
+/*	all non-alphanumeric characters.											*/
+/*																				*/
+/********************************************************************************/
+INSERT INTO	whaight.BHI_Pro_clm_hdr_clean
+(	SELECT
+			pro.claim_ID							::	VARCHAR( 12 )		AS	claim_ID
+		,	pro.member_ID							::	VARCHAR( 12 )		AS	member_ID
+		,	pro.category_Of_Service_Code			::	VARCHAR(  3 )		AS	category_Of_Service_Code
+		,	pro.place_Of_Service_Code				::	VARCHAR(  2 )		AS	place_Of_Service_Code
+		,	pro.claim_Type_Code						::	VARCHAR(  2 )		AS	claim_Type_Code
+		,	pro.first_Date_Of_Service				::	DATE				AS	first_Date_Of_Service
+		,	pro.last_Date_Of_Service				::	DATE				AS	last_Date_Of_Service
+		,	REGEXP_REPLACE( pro.primary_ICD9_DX_Code, '[^a-zA-Z0-9]+', '' )
+													::	VARCHAR(  7 )		AS	primary_ICD9_DX_Code
+		,	REGEXP_REPLACE( pro.secondary_ICD9_DX_Code1, '[^a-zA-Z0-9]+', '' )
+													::	VARCHAR(  7 )		AS	secondary_ICD9_DX_Code1
+		,	REGEXP_REPLACE( pro.secondary_ICD9_DX_Code2, '[^a-zA-Z0-9]+', '' )
+													::	VARCHAR(  7 )		AS	secondary_ICD9_DX_Code2
+		,	REGEXP_REPLACE( pro.secondary_ICD9_DX_Code3, '[^a-zA-Z0-9]+', '' )
+													::	VARCHAR(  7 )		AS	secondary_ICD9_DX_Code3
+		,	pro.billing_Provider_NPI				::	VARCHAR( 10 )		AS	billing_Provider_NPI
+		,	pro.billing_Provider_Specialty_Code		::	VARCHAR(  2 )		AS	billing_Provider_Specialty_Code
+		,	pro.billing_Provider_Zip_Code			::	VARCHAR(  5 )		AS	billing_Provider_Zip_Code
+		,	pro.billing_Provider_Medicare_ID		::	VARCHAR( 20 )		AS	billing_Provider_Medicare_ID
+		,	pro.rendering_Provider_NPI				::	VARCHAR( 10 )		AS	rendering_Provider_NPI
+		,	pro.rendering_Provider_Specialty_Code	::	VARCHAR(  2 )		AS	rendering_Provider_Specialty_Code
+		,	pro.rendering_Provider_Type_Code		::	VARCHAR(  2 )		AS	rendering_Provider_Type_Code
+		,	pro.rendering_Provider_Zip_Code			::	VARCHAR(  5 )		AS	rendering_Provider_Zip_Code
+		,	pro.ICD_Code_Type						::	VARCHAR(  1 )		AS	ICD_Code_Type
+		,	REGEXP_REPLACE( pro.primary_ICD10_DX_Code, '[^a-zA-Z0-9]+', '' )
+													::	VARCHAR(  8 )		AS	primary_ICD10_DX_Code
+		,	REGEXP_REPLACE( pro.secondary_ICD10_DX_Code1, '[^a-zA-Z0-9]+', '' )
+													::	VARCHAR(  8 )		AS	secondary_ICD10_DX_Code1
+		,	REGEXP_REPLACE( pro.secondary_ICD10_DX_Code2, '[^a-zA-Z0-9]+', '' )
+													::	VARCHAR(  8 )		AS	secondary_ICD10_DX_Code2
+		,	REGEXP_REPLACE( pro.secondary_ICD10_DX_Code3, '[^a-zA-Z0-9]+', '' )
+													::	VARCHAR(  8 )		AS	secondary_ICD10_DX_Code3
+		,	pro.claim_Payment_Status_Code			::	VARCHAR(  1 )		AS	claim_Payment_Status_Code
+		,	pro.non_Covered_Reason_Code				::	VARCHAR(  2 )		AS	non_Covered_Reason_Code
+	FROM
+		clean_raw.BHI_Professional_Claims		pro
+);
+ANALYZE COMPRESSION	whaight.BHI_Pro_clm_hdr_clean;
+ANALYZE				whaight.BHI_Pro_clm_hdr_clean;
+VACUUM SORT ONLY	whaight.BHI_Pro_clm_hdr_clean;
+ANALYZE				whaight.BHI_Pro_clm_hdr_clean;
+
+
+</SQL>
+    <Name>BHI_ED_Normalized</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <SQL>CREATE TABLE			whaight.BHI_Pro_clm_hdr_clean							--	H	D
+(		claim_ID							VARCHAR( 12 )		ENCODE	ZSTD	--	*	*
+	,	member_ID							VARCHAR( 12 )		ENCODE	ZSTD	--	*	*
+	,	category_Of_Service_Code			VARCHAR(  3 )		ENCODE	ZSTD	--	*
+	,	place_Of_Service_Code				VARCHAR(  2 )		ENCODE	ZSTD	--	*
+	,	claim_Type_Code						VARCHAR(  2 )		ENCODE	ZSTD	--	*
+	,	first_Date_Of_Service				DATE				ENCODE	ZSTD	--	*
+	,	last_Date_Of_Service				DATE				ENCODE	ZSTD	--	*
+	,	primary_ICD9_DX_Code				VARCHAR(  7 )		ENCODE	ZSTD	--	*
+	,	secondary_ICD9_DX_Code1				VARCHAR(  7 )		ENCODE	ZSTD	--	*
+	,	secondary_ICD9_DX_Code2				VARCHAR(  7 )		ENCODE	ZSTD	--	*
+	,	secondary_ICD9_DX_Code3				VARCHAR(  7 )		ENCODE	ZSTD	--	*
+	,	billing_Provider_NPI				VARCHAR( 10 )		ENCODE	ZSTD	--	*
+	,	billing_Provider_Specialty_Code		VARCHAR(  2 )		ENCODE	ZSTD	--	*
+	,	billing_Provider_Zip_Code			VARCHAR(  5 )		ENCODE	ZSTD	--	*
+	,	billing_Provider_Medicare_ID		VARCHAR( 20 )		ENCODE	ZSTD	--	*
+	,	rendering_Provider_NPI				VARCHAR( 10 )		ENCODE	ZSTD	--	*
+	,	rendering_Provider_Specialty_Code	VARCHAR(  2 )		ENCODE	ZSTD	--	*
+	,	rendering_Provider_Type_Code		VARCHAR(  2 )		ENCODE	ZSTD	--	*
+	,	rendering_Provider_Zip_Code			VARCHAR(  5 )		ENCODE	ZSTD	--	*
+	,	ICD_Code_Type						VARCHAR(  1 )		ENCODE	ZSTD	--	*
+	,	primary_ICD10_DX_Code				VARCHAR(  8 )		ENCODE	ZSTD	--	*
+	,	secondary_ICD10_DX_Code1			VARCHAR(  8 )		ENCODE	ZSTD	--	*
+	,	secondary_ICD10_DX_Code2			VARCHAR(  8 )		ENCODE	ZSTD	--	*
+	,	secondary_ICD10_DX_Code3			VARCHAR(  8 )		ENCODE	ZSTD	--	*
+	,	claim_Payment_Status_Code			VARCHAR(  1 )		ENCODE	ZSTD	--	*
+	,	non_Covered_Reason_Code				VARCHAR(  2 )		ENCODE	ZSTD	--	*
+)
+DISTSTYLE KEY
+DISTKEY( member_ID )
+COMPOUND SORTKEY(
+		member_ID
+	,	claim_ID
+	,	rendering_Provider_NPI
+	,	primary_ICD9_DX_Code
+	,	first_Date_Of_Service
+	,	last_Date_Of_Service
+);
+
+
+CREATE TABLE			whaight.BHI_Pro_Clm_Dtl_reduced
+(		claim_ID				VARCHAR( 12 )		ENCODE	ZSTD	--	*	*
+	,	claim_Line_Num			INTEGER				ENCODE	ZSTD	--		*
+	,	member_ID				VARCHAR( 12 )		ENCODE	ZSTD	--	*	*
+	,	CPT_HCPCS_Code			VARCHAR(  6 )		ENCODE	ZSTD	--		*
+	,	CPT_Modifier_Code		VARCHAR(  2 )		ENCODE	ZSTD	--		*
+	,	number_Of_Units			NUMERIC( 10, 3 )	ENCODE	ZSTD	--		*
+	,	type_Of_Service_Code	VARCHAR(  5 )		ENCODE	ZSTD	--		*
+	,	TCRRV_Amount			NUMERIC( 10, 2 )	ENCODE	ZSTD	--		*
+)
+DISTSTYLE KEY
+DISTKEY( member_ID )
+COMPOUND SORTKEY(
+		member_ID
+	,	claim_ID
+	,	claim_Line_Num
+	,	CPT_HCPCS_Code
+);
+
+
+WHERE	icd10_DX_code = ANY(			SELECT	admitting_ICD10_DX_Code
+										FROM	whaight.BHI_claims_ICD_Codes
+								UNION	SELECT	primary_ICD10_DX_Code
+										FROM	whaight.BHI_claims_ICD_Codes	
+								UNION	SELECT	secondary_ICD10_DX_Code1
+										FROM	whaight.BHI_claims_ICD_Codes	
+								UNION	SELECT	secondary_ICD10_DX_Code2
+										FROM	whaight.BHI_claims_ICD_Codes	
+								UNION	SELECT	secondary_ICD10_DX_Code3
+										FROM	whaight.BHI_claims_ICD_Codes	
+								UNION	SELECT	secondary_ICD10_DX_Code4
+										FROM	whaight.BHI_claims_ICD_Codes	
+								UNION	SELECT	secondary_ICD10_DX_Code5
+										FROM	whaight.BHI_claims_ICD_Codes	
+								UNION	SELECT	secondary_ICD10_DX_Code6
+										FROM	whaight.BHI_claims_ICD_Codes	
+								UNION	SELECT	secondary_ICD10_DX_Code7
+										FROM	whaight.BHI_claims_ICD_Codes	
+								UNION	SELECT	secondary_ICD10_DX_Code8
+										FROM	whaight.BHI_claims_ICD_Codes	
+								UNION	SELECT	secondary_ICD10_DX_Code9
+										FROM	whaight.BHI_claims_ICD_Codes	
+								UNION	SELECT	secondary_ICD10_DX_Code10
+										FROM	whaight.BHI_claims_ICD_Codes	)
+
+
+
+DROP TABLE IF EXISTS	whaight.BHI_ICD10_DX_code_frequencies_p;
+CREATE TABLE			whaight.BHI_ICD10_DX_code_frequencies_p
+(		icd10_DX_code	VARCHAR( 8 )	ENCODE	RAW
+	,	frequency		INTEGER			ENCODE	RAW
+)
+DISTSTYLE KEY
+DISTKEY( icd10_DX_code )
+COMPOUND SORTKEY( icd10_DX_code );
+
+
+
+INSERT INTO	whaight.BHI_ICD10_DX_code_frequencies_p
+(	SELECT DISTINCT		codes.icd10_DX_code			::	VARCHAR( 8 )	AS	icd10_DX_code
+					,	COUNT( claims.claim_ID )	::	INTEGER			AS	frequency
+	FROM				whaight.BHI_master_list_of_claims					claims
+			JOIN		whaight.BHI_claims_ICD_codes						dat
+			ON				claims.claim_ID		=	dat.claim_ID
+						AND	claims.member_ID	=	dat.member_ID
+					,	whaight.BHI_master_list_of_ICD10_DX_codes_in_claims	codes
+	WHERE	codes.icd10_DX_code	=	dat.primary_ICD10_DX_Code
+--			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code1
+--			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code2
+--			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code3
+--			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code4
+--			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code5
+--			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code6
+--			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code7
+--			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code8
+--			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code9
+--			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code10
+	GROUP BY	icd10_DX_code
+);
+--ANALYZE COMPRESSION	whaight.BHI_ICD10_DX_code_frequencies_p;
+ANALYZE				whaight.BHI_ICD10_DX_code_frequencies_p;
+VACUUM SORT ONLY	whaight.BHI_ICD10_DX_code_frequencies_p;
+ANALYZE				whaight.BHI_ICD10_DX_code_frequencies_p;
+
+
+
+DROP TABLE IF EXISTS	whaight.BHI_ICD10_DX_code_frequencies_a;
+CREATE TABLE			whaight.BHI_ICD10_DX_code_frequencies_a
+(		icd10_DX_code	VARCHAR( 8 )	ENCODE	RAW
+	,	frequency		INTEGER			ENCODE	RAW
+)
+DISTSTYLE KEY
+DISTKEY( icd10_DX_code )
+COMPOUND SORTKEY( icd10_DX_code );
+
+
+
+INSERT INTO	whaight.BHI_ICD10_DX_code_frequencies_a
+(	SELECT DISTINCT		codes.icd10_DX_code			::	VARCHAR( 8 )	AS	icd10_DX_code
+					,	COUNT( claims.claim_ID )	::	INTEGER			AS	frequency
+	FROM				whaight.BHI_master_list_of_claims					claims
+			JOIN		whaight.BHI_claims_ICD_codes						dat
+			ON				claims.claim_ID		=	dat.claim_ID
+						AND	claims.member_ID	=	dat.member_ID
+					,	whaight.BHI_master_list_of_ICD10_DX_codes_in_claims	codes
+	WHERE	codes.icd10_DX_code	=	dat.admitting_ICD10_DX_Code
+	GROUP BY	icd10_DX_code
+);
+--ANALYZE COMPRESSION	whaight.BHI_ICD10_DX_code_frequencies_a;
+ANALYZE				whaight.BHI_ICD10_DX_code_frequencies_a;
+VACUUM SORT ONLY	whaight.BHI_ICD10_DX_code_frequencies_a;
+ANALYZE				whaight.BHI_ICD10_DX_code_frequencies_a;
+
+
+
+DROP TABLE IF EXISTS	whaight.BHI_ICD10_DX_code_frequencies;
+CREATE TABLE			whaight.BHI_ICD10_DX_code_frequencies
+(		icd10_DX_code	VARCHAR( 8 )	ENCODE	RAW
+	,	frequency		INTEGER			ENCODE	RAW
+)
+DISTSTYLE KEY
+DISTKEY( icd10_DX_code )
+COMPOUND SORTKEY( icd10_DX_code );
+
+
+
+INSERT INTO	whaight.BHI_ICD10_DX_code_frequencies
+(	SELECT DISTINCT		codes.icd10_DX_code			::	VARCHAR( 8 )	AS	icd10_DX_code
+					,	p.frequency + a.frequency	::	INTEGER			AS	frequency
+	FROM			whaight.BHI_claims_ICD_codes			codes
+			JOIN	whaight.BHI_ICD10_DX_code_frequencies_p	p
+			ON		codes.icd10_DX_code	=	p.icd10_DX_code
+			JOIN	whaight.BHI_ICD10_DX_code_frequencies_a	a
+			ON		codes.icd10_DX_code	=	a.icd10_DX_code
+);
+--ANALYZE COMPRESSION	whaight.BHI_ICD10_DX_code_frequencies;
+ANALYZE				whaight.BHI_ICD10_DX_code_frequencies;
+VACUUM SORT ONLY	whaight.BHI_ICD10_DX_code_frequencies;
+ANALYZE				whaight.BHI_ICD10_DX_code_frequencies;
+
+
+
+SELECT	*	FROM	whaight.BHI_ICD10_DX_code_frequencies_dummy	LIMIT	1000;
+</SQL>
+    <Name>Tab 7</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <SQL>
+
+DROP TABLE IF EXISTS	whaight.BHI_claims_ICD_codes;
+CREATE TABLE			whaight.BHI_claims_ICD_codes
+(		claim_ID						VARCHAR( 12 )	ENCODE	ZSTD	--  both
+	,	member_ID						VARCHAR( 12 )	ENCODE	ZSTD	--  both
+	/*	Facility claims table, 'F', Professional table, 'P'	*/
+    ,   claim_Source                    VARCHAR(  1 )	ENCODE	ZSTD	--	NEW!
+	,	ICD_Code_Type					VARCHAR(  1 )	ENCODE	ZSTD	--  both
+	,	admitting_ICD10_DX_Code			VARCHAR(  8 )	ENCODE	ZSTD	--	NOT in Professional
+	,	primary_ICD10_DX_Code			VARCHAR(  8 )	ENCODE	ZSTD	--  both
+	,	secondary_ICD10_DX_Code1		VARCHAR(  8 )	ENCODE	ZSTD	--  both
+	,	secondary_ICD10_DX_Code2		VARCHAR(  8 )	ENCODE	ZSTD	--  both
+	,	secondary_ICD10_DX_Code3		VARCHAR(  8 )	ENCODE	ZSTD	--  both
+	,	secondary_ICD10_DX_Code4		VARCHAR(  8 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD10_DX_Code5		VARCHAR(  8 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD10_DX_Code6		VARCHAR(  8 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD10_DX_Code7		VARCHAR(  8 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD10_DX_Code8		VARCHAR(  8 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD10_DX_Code9		VARCHAR(  8 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD10_DX_Code10		VARCHAR(  8 )	ENCODE	ZSTD	--  NOT in Professional
+	,	principal_ICD10_Proc_Code		VARCHAR(  7 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD10_Proc_Code1		VARCHAR(  7 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD10_Proc_Code2		VARCHAR(  7 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD10_Proc_Code3		VARCHAR(  7 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD10_Proc_Code4		VARCHAR(  7 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD10_Proc_Code5		VARCHAR(  7 )	ENCODE	ZSTD	--  NOT in Professional
+)
+DISTSTYLE KEY
+DISTKEY( member_ID )
+COMPOUND SORTKEY(
+		member_ID
+	,	claim_ID
+	,	primary_ICD10_DX_Code
+);
+
+
+
+INSERT INTO	whaight.BHI_claims_ICD_codes
+(		SELECT
+				claim_ID						::	VARCHAR( 12 )	AS	claim_ID
+			,	member_ID						::	VARCHAR( 12 )	AS	member_ID
+			,   'F'								::  VARCHAR(  1 )	AS  claim_Source
+			,	ICD_Code_Type					::	VARCHAR(  1 )	AS	ICD_Code_Type
+			,	REGEXP_REPLACE( admitting_ICD10_DX_Code, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	admitting_ICD10_DX_Code
+			,	REGEXP_REPLACE( primary_ICD10_DX_Code, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	primary_ICD10_DX_Code
+			,	REGEXP_REPLACE( secondary_ICD10_DX_Code1, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code1
+			,	REGEXP_REPLACE( secondary_ICD10_DX_Code2, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code2
+			,	REGEXP_REPLACE( secondary_ICD10_DX_Code3, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code3
+			,	REGEXP_REPLACE( secondary_ICD10_DX_Code4, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code4
+			,	REGEXP_REPLACE( secondary_ICD10_DX_Code5, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code5
+			,	REGEXP_REPLACE( secondary_ICD10_DX_Code6, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code6
+			,	REGEXP_REPLACE( secondary_ICD10_DX_Code7, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code7
+			,	REGEXP_REPLACE( secondary_ICD10_DX_Code8, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code8
+			,	REGEXP_REPLACE( secondary_ICD10_DX_Code9, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code9
+			,	REGEXP_REPLACE( secondary_ICD10_DX_Code10, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code10
+			,	REGEXP_REPLACE( principal_ICD10_Procedure_Code, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	principal_ICD10_Proc_Code
+			,	REGEXP_REPLACE( secondary_ICD10_Procedure_Code1, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	secondary_ICD10_Proc_Code1
+			,	REGEXP_REPLACE( secondary_ICD10_Procedure_Code2, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	secondary_ICD10_Proc_Code2
+			,	REGEXP_REPLACE( secondary_ICD10_Procedure_Code3, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	secondary_ICD10_Proc_Code3
+			,	REGEXP_REPLACE( secondary_ICD10_Procedure_Code4, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	secondary_ICD10_Proc_Code4
+			,	REGEXP_REPLACE( secondary_ICD10_Procedure_Code5, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	secondary_ICD10_Proc_Code5
+		FROM
+			clean_raw.BHI_Facility_Claim_Header
+	UNION
+	    SELECT
+				claim_ID						::	VARCHAR( 12 )	AS	claim_ID
+            ,	member_ID						::	VARCHAR( 12 )	AS	member_ID
+            ,   'P'								::  VARCHAR(  1 )	AS  claim_Source
+		    ,	ICD_Code_Type					::	VARCHAR(  1 )	AS	ICD_Code_Type
+			,	NULL							::	VARCHAR(  8 )	AS	admitting_ICD10_DX_Code
+			,	REGEXP_REPLACE( primary_ICD10_DX_Code, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	primary_ICD10_DX_Code
+			,	REGEXP_REPLACE( secondary_ICD10_DX_Code1, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code1
+			,	REGEXP_REPLACE( secondary_ICD10_DX_Code2, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code2
+			,	REGEXP_REPLACE( secondary_ICD10_DX_Code3, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code3
+			,	NULL							::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code4
+			,	NULL							::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code5
+			,	NULL							::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code6
+			,	NULL							::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code7
+			,	NULL							::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code8
+			,	NULL							::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code9
+			,	NULL							::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code10
+			,	NULL							::	VARCHAR(  7 )	AS	principal_ICD10_Proc_Code
+			,	NULL							::	VARCHAR(  7 )	AS	secondary_ICD10_Proc_Code1
+			,	NULL							::	VARCHAR(  7 )	AS	secondary_ICD10_Proc_Code2
+			,	NULL							::	VARCHAR(  7 )	AS	secondary_ICD10_Proc_Code3
+			,	NULL							::	VARCHAR(  7 )	AS	secondary_ICD10_Proc_Code4
+			,	NULL							::	VARCHAR(  7 )	AS	secondary_ICD10_Proc_Code5
+		FROM
+			clean_raw.BHI_Professional_Claims
+	);
+--ANALYZE COMPRESSION		whaight.BHI_claims_ICD_codes;
+ANALYZE					whaight.BHI_claims_ICD_codes;
+VACUUM SORT ONLY		whaight.BHI_claims_ICD_codes;
+ANALYZE					whaight.BHI_claims_ICD_codes;
+
+
+
+DROP TABLE IF EXISTS	whaight.BHI_master_list_of_claims;
+CREATE TABLE			whaight.BHI_master_list_of_claims
+(		claim_ID	VARCHAR( 12 )	ENCODE	ZSTD
+	,	member_ID	VARCHAR( 12 )	ENCODE	ZSTD
+)
+DISTSTYLE KEY
+DISTKEY( member_ID )
+COMPOUND SORTKEY(
+		member_ID
+	,	claim_ID
+);
+
+
+
+INSERT INTO	whaight.BHI_master_list_of_claims
+(	SELECT DISTINCT
+			claim_ID	::	VARCHAR( 12 )	AS	claim_ID
+		,	member_ID	::	VARCHAR( 12 )	AS	member_ID
+	FROM
+		whaight.BHI_claims_ICD_codes
+);
+--ANALYZE COMPRESSION	whaight.BHI_master_list_of_claims;
+ANALYZE				whaight.BHI_master_list_of_claims;
+VACUUM SORT ONLY	whaight.BHI_master_list_of_claims;
+ANALYZE				whaight.BHI_master_list_of_claims;
+
+
+
+DROP TABLE IF EXISTS	whaight.BHI_master_list_of_ICD10_DX_codes_in_claims;
+CREATE TABLE			whaight.BHI_master_list_of_ICD10_DX_codes_in_claims
+(	icd10_DX_code	VARCHAR( 8 )	ENCODE	ZSTD	)
+DISTSTYLE KEY
+DISTKEY( icd10_DX_code )
+COMPOUND SORTKEY( icd10_DX_code );
+
+
+
+INSERT INTO	whaight.BHI_master_list_of_ICD10_DX_codes_in_claims
+(			SELECT DISTINCT admitting_ICD10_DX_Code		::	VARCHAR( 8 )	AS	icd10_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	primary_ICD10_DX_Code		::	VARCHAR( 8 )	AS	icd10_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	secondary_ICD10_DX_Code1	::	VARCHAR( 8 )	AS	icd10_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	secondary_ICD10_DX_Code2	::	VARCHAR( 8 )	AS	icd10_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	secondary_ICD10_DX_Code3	::	VARCHAR( 8 )	AS	icd10_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	secondary_ICD10_DX_Code4	::	VARCHAR( 8 )	AS	icd10_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	secondary_ICD10_DX_Code5	::	VARCHAR( 8 )	AS	icd10_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	secondary_ICD10_DX_Code6	::	VARCHAR( 8 )	AS	icd10_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	secondary_ICD10_DX_Code7	::	VARCHAR( 8 )	AS	icd10_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	secondary_ICD10_DX_Code8	::	VARCHAR( 8 )	AS	icd10_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	secondary_ICD10_DX_Code9	::	VARCHAR( 8 )	AS	icd10_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	secondary_ICD10_DX_Code10	::	VARCHAR( 8 )	AS	icd10_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+);
+--ANALYZE COMPRESSION	whaight.BHI_master_list_of_ICD10_DX_codes_in_claims;
+ANALYZE				whaight.BHI_master_list_of_ICD10_DX_codes_in_claims;
+VACUUM SORT ONLY	whaight.BHI_master_list_of_ICD10_DX_codes_in_claims;
+ANALYZE				whaight.BHI_master_list_of_ICD10_DX_codes_in_claims;
+
+
+
+SELECT	*	FROM	whaight.BHI_master_list_of_ICD10_DX_codes_in_claims	LIMIT	500;
+
+
+
+DROP TABLE IF EXISTS	whaight.BHI_ICD10_DX_code_frequencies;
+CREATE TABLE			whaight.BHI_ICD10_DX_code_frequencies
+(		icd10_DX_code	VARCHAR( 8 )	ENCODE	RAW
+	,	frequency		INTEGER			ENCODE	RAW
+)
+DISTSTYLE KEY
+DISTKEY( icd10_DX_code )
+COMPOUND SORTKEY( icd10_DX_code );
+
+
+
+INSERT INTO	whaight.BHI_ICD10_DX_code_frequencies
+(	SELECT DISTINCT		codes.icd10_DX_code			::	VARCHAR( 8 )	AS	icd10_DX_code
+					,	COUNT( claims.claim_ID )	::	INTEGER			AS	frequency
+	FROM				whaight.BHI_master_list_of_claims					claims
+			JOIN		whaight.BHI_claims_ICD_codes						dat
+			ON				claims.claim_ID		=	dat.claim_ID
+						AND	claims.member_ID	=	dat.member_ID
+					,	whaight.BHI_master_list_of_ICD10_DX_codes_in_claims	codes
+	WHERE			codes.icd10_DX_code	=	dat.admitting_ICD10_DX_Code
+			OR		codes.icd10_DX_code	=	dat.primary_ICD10_DX_Code
+			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code1
+			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code2
+			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code3
+			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code4
+			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code5
+			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code6
+			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code7
+			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code8
+			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code9
+			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code10
+	GROUP BY	icd10_DX_code
+);
+ANALYZE COMPRESSION	whaight.BHI_ICD10_DX_code_frequencies;
+ANALYZE				whaight.BHI_ICD10_DX_code_frequencies;
+VACUUM SORT ONLY	whaight.BHI_ICD10_DX_code_frequencies;
+ANALYZE				whaight.BHI_ICD10_DX_code_frequencies;
+
+
+SELECT	*	FROM	whaight.BHI_ICD10_DX_code_frequencies	LIMIT	500;
+
+</SQL>
+    <Name>Tab 9</Name>
+  </Query>
+</QuerySet>
