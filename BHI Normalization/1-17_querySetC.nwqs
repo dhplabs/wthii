@@ -2387,4 +2387,244 @@ where	DATEDIFF( DAY, '2017-05-01', firstdos )	&gt;=	0
     <File>../../HFNY_claim_Level_Herceptin_Flags.sql</File>
     <Name>HFNY_claim_Level_Herceptin_Flags</Name>
   </Query>
+  <Query IsView="False" IsSP="False">
+    <File>../HFNY%20Herceptin/HFNY_history_level_herceptin_flags.sql</File>
+    <Name>HFNY_history_level_herceptin_flags</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <SQL>
+
+/*	claim level flags, WED evening, 2/6	*/
+SELECT
+		member_ID
+	,	first_DOS
+	,	SUM( wasted_units )				AS	count_of_wasted_units
+	,	SUM( administered_units )		AS	count_of_administered_units
+	,	count_of_wasted_units + count_of_administered_units
+										AS	TOTAL_UNITS
+	,	SUM( paid_for_wasted )			AS	paid_for_wasted_units
+	,	SUM( paid_for_administered )	AS	paid_for_administered_units
+	,	paid_for_wasted_units + paid_for_administered_units
+										AS	TOTAL_PAID
+	,	SUM( allowed_amount )			AS	total_allowed_amount
+	,	CASE	count_of_administered_units &gt; 95
+			WHEN	TRUE	THEN	'1'
+			ELSE					'0'
+		END								AS	abnormality_flag_A
+	,	CASE	count_of_administered_units IN ( 44, 88 )
+			WHEN	TRUE	THEN	'1'
+			ELSE					'0'
+		END								AS	abnormality_flag_B
+	,	CASE	count_of_administered_units = 0
+			WHEN	TRUE	THEN	'1'
+			ELSE					'0'
+		END								AS	abnormality_flag_C
+	,	CASE	count_of_administered_units IN ( 15, 30, 45, 60, 75, 90 )
+			WHEN	TRUE	THEN	'1'
+			ELSE					'0'
+		END								AS	abnormality_flag_E
+	,	MAX( abnormality_pre_flag_D )	AS	abnormality_flag_D
+	,	MIN( disposition_of_modifier )	AS	min_dom
+	,	MAX( disposition_of_modifier )	AS	max_dom
+FROM
+	(	SELECT
+				claims.ClaimNumber			AS	claim_ID
+			,	claims.MemberID				AS	member_ID
+			,	claims.LineNumber			AS	line_num
+			,	CASE	claims.ClaimStatus
+					WHEN	'D'	THEN	'unpaid'
+					WHEN	'F'	THEN	'paid'
+				END							AS	claim_payment_status
+			,	CASE	claims.CPTCode1
+					WHEN	'J9355'	THEN	'herceptin'
+					ELSE					NULL
+				END							AS	administered
+			,	claims.ProcedureCodeModifier1
+			,	CASE	claims.ProcedureCodeModifier1	IS	NULL
+					WHEN	TRUE	THEN	'tis_null'
+					ELSE					'taint_null'
+				END							AS	disposition_of_modifier
+			,	CASE	(		disposition_of_modifier			=	'taint_null'
+							AND	claims.ProcedureCodeModifier1	=	'JW'			)
+					WHEN	TRUE	THEN	claims.Units::FLOAT
+					WHEN	FALSE	THEN	0.0
+				END							AS	wasted_units
+			,	CASE	(		(		disposition_of_modifier			=	'tis_null'		)
+							OR	(		disposition_of_modifier			=	'taint_null'
+									AND	claims.ProcedureCodeModifier1	!=	'JW'			)	)
+					WHEN	TRUE	THEN	claims.Units::FLOAT
+					WHEN	FALSE	THEN	0.0
+				END							AS	administered_units
+			,	CASE	(		disposition_of_modifier			=	'taint_null'
+							AND	claims.ProcedureCodeModifier1	=	'JW'			)
+					WHEN	TRUE	THEN	claims.ClaimPaidAmount
+					WHEN	FALSE	THEN	0.0
+				END							AS	paid_for_wasted
+			,	CASE	(		(		disposition_of_modifier			=	'tis_null'		)
+							OR	(		disposition_of_modifier			=	'taint_null'
+									AND	claims.ProcedureCodeModifier1	!=	'JW'			)	)
+					WHEN	TRUE	THEN	claims.ClaimPaidAmount
+					WHEN	FALSE	THEN	0.0
+				END							AS	paid_for_administered
+			,	claims.Units				AS	units
+			,	claims.ClaimPaidAmount		AS	paid_amount
+			,	claims.ClaimAllowedAmount	AS	allowed_amount
+			,	claims.FirstDOS				AS	first_DOS
+			,	CASE		(		Units::float			&lt;	5.0		)
+						AND	(		ProcedureCodeModifier1	!=	'JW'
+								OR	ProcedureCodeModifier1	IS	NULL	)
+					WHEN	TRUE	THEN	'1'
+					WHEN	FALSE	THEN	'0'
+				END							AS	abnormality_pre_flag_D
+		FROM
+					ESRD_clean_raw.medical_claims							claims
+			JOIN	(	SELECT DISTINCT	member_ID
+						FROM			whaight.HFNY_herc_claims_clean	)	herc
+			ON		claims.MemberID	=	herc.member_ID
+		WHERE
+				claim_payment_status	=	'paid'
+			AND	administered			=	'herceptin'
+			AND	paid_amount				&gt;	0
+			AND	DATEDIFF( DAY, '2017-05-01', FirstDOS )	&gt;=	0
+		ORDER BY
+				member_ID	ASC
+			,	first_DOS	ASC
+	)
+GROUP BY
+		member_ID
+	,	first_DOS
+ORDER BY
+		member_ID	ASC
+	,	first_DOS	ASC
+;
+
+
+
+
+
+
+
+/*	Let's count up those claim level flags, WED evening, 2/6	*/
+SELECT
+		SUM( abnormality_flag_A )	AS	A
+	,	SUM( abnormality_flag_B )	AS	B
+	,	SUM( abnormality_flag_C )	AS	C
+	,	SUM( abnormality_flag_D )	AS	D
+	,	SUM( abnormality_flag_E )	AS	E
+FROM
+(	SELECT
+		member_ID
+	,	first_DOS
+	,	SUM( wasted_units )				AS	count_of_wasted_units
+	,	SUM( administered_units )		AS	count_of_administered_units
+	,	SUM( paid_for_wasted )			AS	paid_for_wasted_units
+	,	SUM( paid_for_administered )	AS	paid_for_administered_units
+	,	SUM( allowed_amount )			AS	total_allowed_amount
+	,	CASE	count_of_administered_units &gt; 95
+			WHEN	TRUE	THEN	'1'
+			ELSE					'0'
+		END								AS	abnormality_flag_A
+	,	CASE	count_of_administered_units IN ( 44, 88 )
+			WHEN	TRUE	THEN	'1'
+			ELSE					'0'
+		END								AS	abnormality_flag_B
+	,	CASE	count_of_administered_units = 0
+			WHEN	TRUE	THEN	'1'
+			ELSE					'0'
+		END								AS	abnormality_flag_C
+	,	CASE	count_of_administered_units IN ( 15, 30, 45, 60, 75, 90 )
+			WHEN	TRUE	THEN	'1'
+			ELSE					'0'
+		END								AS	abnormality_flag_E
+	,	MAX( abnormality_pre_flag_D )	AS	abnormality_flag_D
+	,	MIN( disposition_of_modifier )	AS	min_dom
+	,	MAX( disposition_of_modifier )	AS	max_dom
+FROM
+	(	SELECT
+				claims.ClaimNumber			AS	claim_ID
+			,	claims.MemberID				AS	member_ID
+			,	claims.LineNumber			AS	line_num
+			,	CASE	claims.ClaimStatus
+					WHEN	'D'	THEN	'unpaid'
+					WHEN	'F'	THEN	'paid'
+				END							AS	claim_payment_status
+			,	CASE	claims.CPTCode1
+					WHEN	'J9355'	THEN	'herceptin'
+					ELSE					NULL
+				END							AS	administered
+			,	claims.ProcedureCodeModifier1
+			,	CASE	claims.ProcedureCodeModifier1	IS	NULL
+					WHEN	TRUE	THEN	'tis_null'
+					ELSE					'taint_null'
+				END							AS	disposition_of_modifier
+			,	CASE	(		disposition_of_modifier			=	'taint_null'
+							AND	claims.ProcedureCodeModifier1	=	'JW'			)
+					WHEN	TRUE	THEN	claims.Units::FLOAT
+					WHEN	FALSE	THEN	0.0
+				END							AS	wasted_units
+			,	CASE	(		(		disposition_of_modifier			=	'tis_null'		)
+							OR	(		disposition_of_modifier			=	'taint_null'
+									AND	claims.ProcedureCodeModifier1	!=	'JW'			)	)
+					WHEN	TRUE	THEN	claims.Units::FLOAT
+					WHEN	FALSE	THEN	0.0
+				END							AS	administered_units
+			,	CASE	(		disposition_of_modifier			=	'taint_null'
+							AND	claims.ProcedureCodeModifier1	=	'JW'			)
+					WHEN	TRUE	THEN	claims.ClaimPaidAmount
+					WHEN	FALSE	THEN	0.0
+				END							AS	paid_for_wasted
+			,	CASE	(		(		disposition_of_modifier			=	'tis_null'		)
+							OR	(		disposition_of_modifier			=	'taint_null'
+									AND	claims.ProcedureCodeModifier1	!=	'JW'			)	)
+					WHEN	TRUE	THEN	claims.ClaimPaidAmount
+					WHEN	FALSE	THEN	0.0
+				END							AS	paid_for_administered
+			,	claims.Units				AS	units
+			,	claims.ClaimPaidAmount		AS	paid_amount
+			,	claims.ClaimAllowedAmount	AS	allowed_amount
+			,	claims.FirstDOS				AS	first_DOS
+			,	CASE		(		Units::float			&lt;	5.0		)
+						AND	(		ProcedureCodeModifier1	!=	'JW'
+								OR	ProcedureCodeModifier1	IS	NULL	)
+					WHEN	TRUE	THEN	'1'
+					WHEN	FALSE	THEN	'0'
+				END							AS	abnormality_pre_flag_D
+		FROM
+					ESRD_clean_raw.medical_claims							claims
+			JOIN	(	SELECT DISTINCT	member_ID
+						FROM			whaight.HFNY_herc_claims_clean	)	herc
+			ON		claims.MemberID	=	herc.member_ID
+		WHERE
+				claim_payment_status	=	'paid'
+			AND	administered			=	'herceptin'
+			AND	paid_amount				&gt;	0
+			AND	DATEDIFF( DAY, '2017-05-01', FirstDOS )	&gt;=	0
+		ORDER BY
+				member_ID	ASC
+			,	first_DOS	ASC
+	)
+GROUP BY
+		member_ID
+	,	first_DOS
+ORDER BY
+		member_ID	ASC
+	,	first_DOS	ASC
+);
+/*
+RESULTS:
+a	b	c	d	e
+17	36	0	129	679
+*/
+
+
+</SQL>
+    <Name>JW</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <Name>Tab 12</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <File>../../../../Downloads/Austin's%20EM%20code/HFNY_EM.sql</File>
+    <Name>HFNY_EM</Name>
+  </Query>
 </QuerySet>

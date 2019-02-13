@@ -8,16 +8,16 @@
 /*					whaight.BHI_ICD10_to_ICD9_xwalk		(deleted)				*/
 /*					whaight.BHI_ICD9_descriptions		(deleted)				*/
 /*					whaight.BHI_ICD10_descriptions		(deleted)				*/
-/*					whaight.BHI_ICD9_to_ICD10_xwalk_desc						*/
-/*					whaight.BHI_ICD10_to_ICD9_xwalk_desc						*/
-/*					whaight.BHI_Facility_Claim_Header_step_0					*/
-/*					whaight.BHI_Facility_Claim_Header_step_1					*/
+/*					whaight.BHI_ICD9_to_ICD10_xwalk_desc							*/
+/*					whaight.BHI_ICD10_to_ICD9_xwalk_desc							*/
+/*					whaight.BHI_Facility_Claim_Header_step_0						*/
+/*					whaight.BHI_Facility_Claim_Header_step_1						*/
 /*					whaight.BHI_claims_ICD_DX_Codes								*/
 /*					whaight.BHI_claims_ICD9_Proc_Codes							*/
 /*					whaight.BHI_claims_ICD10_Proc_Codes							*/
 /*					whaight.BHI_Facility_Claim_Header_1NF						*/
 /*																				*/
-/*	MODIFICATIONS																*
+/*	MODIFICATIONS																*/
 /*																				*/
 /*		1.	BY:		wthii														*/
 /*			DATE:	12/7/2018													*/

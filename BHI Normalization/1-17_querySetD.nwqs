@@ -283,4 +283,502 @@ ORDER BY
     <File>../../Carls_question.sql</File>
     <Name>Carls_question</Name>
   </Query>
+  <Query IsView="False" IsSP="False">
+    <SQL>
+
+SELECT
+        member_id
+    ,   first_date_of_service
+    ,   rendering_provider_specialty_code
+    ,   max(cpt_hcpcs_code)                 as  maxcode
+    ,   min(cpt_hcpcs_code)                 as  mincode
+    ,   sum(number_of_units)                as  units
+    ,   prof_indicator
+INTO    allemlines
+-- INTO TEMP allemlines
+FROM -- union of relevant facility + professional claims
+    (   SELECT
+                header.member_id
+            ,   first_date_of_service
+            ,   last_date_of_service
+            ,   header.claim_id
+            ,   claim_line_num
+            ,   false as prof_indicator
+        --
+            ,   number_of_units
+            ,   place_of_service_code
+            ,   cpt_hcpcs_code
+            ,   modifier_code
+            ,   revenue_code
+            ,   type_of_service_code
+            ,   tcrrv_amount
+        --
+            ,   rendering_provider_npi
+            ,   rendering_provider_specialty_code
+            ,   discharge_status_code
+        FROM -- facility claim with EM lines w/ relevant header info (date)
+            (
+                    (   SELECT
+                                claim_id
+                            ,   member_id
+                            ,   first_date_of_service
+                            ,   last_date_of_service
+                            ,   rendering_provider_npi
+                            ,   rendering_provider_specialty_code
+                            ,   place_of_service_code
+                            ,   discharge_status_code
+                            FROM    bhi_dev.clean_raw.bhi_facility_claim_header
+                    )   header
+                JOIN	--	This join just marries the info in the header and detail tables for facility claims.  
+                    (   SELECT
+                                cpt_hcpcs_code
+                            ,   procedure_modifier_code as modifier_code
+                            ,   revenue_code
+                            ,   type_of_service_code
+                            ,   member_id
+                            ,   claim_id
+                            ,   number_of_units
+                            ,   tcrrv_amount
+                            ,   claim_line_num
+                        FROM    clean_raw.bhi_facility_claim_detail
+                        WHERE  -- have at least 1 EM level paid for
+                                cpt_hcpcs_code IN ( '99281','99282','99283','99284','99285',
+                                                    -- multiple 99292's permitted
+                                                    '99291', --'99292',
+                                                    'G0380','G0381','G0382','G0383','G0384')
+                            AND claim_payment_status_code='P'
+                            AND number_of_units &gt; 0
+                    ) em
+                ON      (   header.member_id    =   em.member_id    )
+                    AND (   header.claim_id     =   em.claim_id     )
+            )
+    ------------------
+    -- Professional --
+    ------------------
+    UNION
+        SELECT
+                member_id
+            ,   first_date_of_service
+            ,   last_date_of_service
+            ,   claim_id
+            ,   claim_line_num
+            ,   true as prof_indicator
+                --
+            ,   number_of_units
+            ,   place_of_service_code
+            ,   cpt_hcpcs_code
+            ,   cpt_modifier_code as modifier_code
+            ,   NULL as revenue_code
+            ,   type_of_service_code
+            ,   tcrrv_amount
+                --
+            ,   rendering_provider_npi
+            ,   rendering_provider_specialty_code
+                --
+            ,   NULL as discharge_status_code
+        FROM    clean_raw.bhi_professional_claims
+        WHERE -- have at least 1 EM level paid for
+                cpt_hcpcs_code IN ( '99281','99282','99283','99284','99285',
+                                    -- multiple 99292's potentially ok
+                                    '99291', --'99292',
+                                    'G0380','G0381','G0382','G0383','G0384')
+            AND claim_payment_status_code='P'
+            AND number_of_units &gt; 0
+    )
+GROUP BY
+        member_id
+    ,   first_date_of_service
+    ,   rendering_provider_specialty_code
+    ,   prof_indicator
+    --cpt_hcpcs_code really want any instance of multiple
+-- Filter this below
+-- HAVING
+--     units &gt; 1
+ORDER BY
+        member_id
+    ,   first_date_of_service
+    ,   rendering_provider_specialty_code
+    ,   prof_indicator
+    --cpt_hcpcs_code really want any instance of multiple
+
+
+---------------------------------------------------
+
+
+-- Austin Privett
+-- 1/28/2019
+-- This throws information away, I think.
+-- TODO: combine overlapping stays?
+-- Find any instances of not following: 1 unit EM / specialty / day
+-- Do the rest in python
+/*
+Acceptable:
+    EITHER:
+        1 facility + 1 / specialty / day
+    OR
+        0 facility + 1 / specialty / day
+
+    ADD:
+1 facility + 1 Unknown
+*/
+
+
+SELECT
+		member_id
+    ,	first_date_of_service
+    ,	rendering_provider_specialty_code
+    ,	max(cpt_hcpcs_code) as maxcode
+    ,	min(cpt_hcpcs_code) as mincode
+    ,	sum(number_of_units) as units
+    ,	prof_indicator
+INTO	allemlines
+-- INTO TEMP allemlines
+FROM -- union of relevant facility + professional claims
+	(		SELECT
+					header.member_id
+        		,	first_date_of_service
+        		,	last_date_of_service
+        		,	header.claim_id
+        		,	claim_line_num
+        		,	false as prof_indicator
+        			--
+        		,	number_of_units
+        		,	place_of_service_code
+        		,	cpt_hcpcs_code
+        		,	modifier_code
+        		,	revenue_code
+        		,	type_of_service_code
+        		,	tcrrv_amount
+        			--
+        		,	rendering_provider_npi
+        		,	rendering_provider_specialty_code
+        		,	discharge_status_code
+    		FROM -- facility claim with EM lines w/ relevant header info (date)
+    			(
+			       		(	SELECT
+        	    					claim_id
+        	    				,	member_id
+        	    				,	first_date_of_service
+        	    				,	last_date_of_service
+        	    				,	rendering_provider_npi
+        	    				,	rendering_provider_specialty_code
+        	    				,	place_of_service_code
+        	    				,	discharge_status_cod
+        					FROM	bhi_dev.clean_raw.bhi_facility_claim_header
+        				) header
+        			JOIN
+        				(	SELECT
+        	    					cpt_hcpcs_code
+        	    				,	procedure_modifier_code as modifier_code
+        	    				,	revenue_code
+								,	type_of_service_code
+        	    				,	member_id
+        	    				,	claim_id
+        	    				,	number_of_units
+								,	tcrrv_amount
+            					,	claim_line_num
+        					FROM	clean_raw.bhi_facility_claim_detail
+        					WHERE  -- have at least 1 EM level paid for
+				  		   			cpt_hcpcs_code IN	(	'99281','99282','99283','99284','99285',
+                   	 	           						-- multiple 99292's permitted
+                   	     	       						'99291', --'99292',
+                   	         	   						'G0380','G0381','G0382','G0383','G0384')
+            					AND	claim_payment_status_code	=	'P'
+            					AND	number_of_units 			&gt;	0
+        				) em
+        			ON		(	header.member_id	=	em.member_id	)
+						AND (	header.claim_id		=	em.claim_id		)
+    			)
+    ------------------
+    -- Professional --
+    ------------------
+    	UNION
+    		SELECT
+        			member_id
+        		,	first_date_of_service
+        		,	last_date_of_service
+        		,	claim_id
+        		,	claim_line_num
+        		,	true as prof_indicator
+        			--
+        		,	number_of_units
+        		,	place_of_service_code
+        		,	cpt_hcpcs_code
+        		,	cpt_modifier_code as modifier_code
+        		,	NULL as revenue_code
+    			,	type_of_service_code
+  				,	tcrrv_amount
+        			--
+        		,	rendering_provider_npi
+        		,	rendering_provider_specialty_code
+        			--
+        		,	NULL as discharge_status_code
+    		FROM	clean_raw.bhi_professional_claims
+    		WHERE	-- have at least 1 EM level paid for
+        			cpt_hcpcs_code IN ('99281','99282','99283','99284','99285',
+                               -- multiple 99292's potentially ok
+                               '99291', --'99292',
+                               'G0380','G0381','G0382','G0383','G0384')
+        		AND claim_payment_status_code='P'
+        		AND number_of_units &gt; 0
+	)
+GROUP BY
+    	member_id
+    ,	first_date_of_service
+    ,	rendering_provider_specialty_code
+    ,	prof_indicator
+    	--cpt_hcpcs_code really want any instance of multiple
+		-- Filter this below
+		-- HAVING
+		--     units &gt; 1
+ORDER BY
+    	member_id
+    ,	first_date_of_service
+    ,	rendering_provider_specialty_code
+    ,	prof_indicator
+    	--cpt_hcpcs_code really want any instance of multiple
+;
+
+
+
+-- get likely faulty facility claims
+-- no more than 2 per given day (employed prof + fac)
+SELECT
+    	member_id
+    ,	first_date_of_service
+    	--prof_indicator
+    ,	SUM(units)		as	summedunits
+    ,	MIN(mincode)	as	mmincode
+    ,	MAX(maxcode)	as	mmaxcode
+    ,	CASE
+			WHEN	mmincode	=	mmaxcode
+				THEN	FALSE
+				ELSE	TRUE
+		END				as	al codechange
+FROM	allemlines
+GROUP BY
+    	member_id
+    ,	first_date_of_service
+    ,	prof_indicator
+HAVING
+    	prof_indicator	=	False
+	AND summedunits		&gt;	2 -- "sure" amount
+    	-- Can also look for professional claims for "maybes"
+ORDER BY
+    	member_id
+    ,	first_date_of_service
+-- LIMIT 1000
+;
+
+
+
+-- no more than 1 / spec / day
+SELECT
+    member_id,
+    first_date_of_service,
+    rendering_provider_specialty_code,
+    units,
+    mincode,
+    maxcode,
+    CASE WHEN mincode=maxcode THEN FALSE ELSE TRUE END as codechange
+FROM allemlines
+WHERE
+    prof_indicator=True
+    AND
+    units &gt; 2 -- "sure" amount, allowing for "unknowns"
+    -- units &gt; 1 -- "maybe" amount
+ORDER BY
+    member_id,
+    first_date_of_service,
+    rendering_provider_specialty_code
+-- LIMIT 1000
+
+
+-----------------------------------
+
+
+-- Austin Privett
+-- 1/28/2019
+-- This throws information away, I think.
+-- TODO: combine overlapping stays?
+
+-- Find any instances of not following: 1 unit EM / specialty / day
+-- Do the rest in python
+/*
+Acceptable:
+    EITHER:
+        1 facility + 1 / specialty / day
+    OR
+        0 facility + 1 / specialty / day
+
+    ADD:
+1 facility + 1 Unknown
+*/
+
+
+SELECT
+    member_id,
+    first_date_of_service,
+    rendering_provider_specialty_code,
+    max(cpt_hcpcs_code) as maxcode,
+    min(cpt_hcpcs_code) as mincode,
+    sum(number_of_units) as units,
+    prof_indicator
+INTO allemlines
+-- INTO TEMP allemlines
+FROM -- union of relevant facility + professional claims
+(
+    SELECT
+        header.member_id,
+        first_date_of_service,
+        last_date_of_service,
+        header.claim_id,
+        claim_line_num,
+        false as prof_indicator,
+        --
+        number_of_units,
+        place_of_service_code,
+        cpt_hcpcs_code,
+        modifier_code,
+        revenue_code,
+        type_of_service_code,
+        tcrrv_amount,
+        --
+        rendering_provider_npi,
+        rendering_provider_specialty_code,
+        discharge_status_code
+    FROM -- facility claim with EM lines w/ relevant header info (date)
+    (
+        (SELECT
+            claim_id,
+            member_id,
+            first_date_of_service,
+            last_date_of_service,
+            rendering_provider_npi,
+            rendering_provider_specialty_code,
+            place_of_service_code,
+            discharge_status_code
+        FROM bhi_dev.clean_raw.bhi_facility_claim_header
+        ) header
+        JOIN
+        (SELECT
+            cpt_hcpcs_code,
+            procedure_modifier_code as modifier_code,
+            revenue_code,
+            type_of_service_code,
+            member_id,
+            claim_id,
+            number_of_units,
+            tcrrv_amount,
+            claim_line_num
+        FROM clean_raw.bhi_facility_claim_detail
+        WHERE  -- have at least 1 EM level paid for
+            cpt_hcpcs_code IN ('99281','99282','99283','99284','99285',
+                               -- multiple 99292's permitted
+                               '99291', --'99292',
+                               'G0380','G0381','G0382','G0383','G0384')
+            AND claim_payment_status_code='P'
+            AND number_of_units &gt; 0
+        ) em
+        ON (header.member_id=em.member_id) AND (header.claim_id=em.claim_id)
+    )
+    ------------------
+    -- Professional --
+    ------------------
+    UNION
+    SELECT
+        member_id,
+        first_date_of_service,
+        last_date_of_service,
+        claim_id,
+        claim_line_num,
+        true as prof_indicator,
+        --
+        number_of_units,
+        place_of_service_code,
+        cpt_hcpcs_code,
+        cpt_modifier_code as modifier_code,
+        NULL as revenue_code,
+        type_of_service_code,
+        tcrrv_amount,
+        --
+        rendering_provider_npi,
+        rendering_provider_specialty_code,
+        --
+        NULL as discharge_status_code
+    FROM clean_raw.bhi_professional_claims
+    WHERE -- have at least 1 EM level paid for
+        cpt_hcpcs_code IN ('99281','99282','99283','99284','99285',
+                               -- multiple 99292's potentially ok
+                               '99291', --'99292',
+                               'G0380','G0381','G0382','G0383','G0384')
+        AND claim_payment_status_code='P'
+        AND number_of_units &gt; 0
+)
+GROUP BY
+    member_id,
+    first_date_of_service,
+    rendering_provider_specialty_code,
+    prof_indicator
+    --cpt_hcpcs_code really want any instance of multiple
+-- Filter this below
+-- HAVING
+--     units &gt; 1
+ORDER BY
+    member_id,
+    first_date_of_service,
+    rendering_provider_specialty_code,
+    prof_indicator
+    --cpt_hcpcs_code really want any instance of multiple
+;
+
+
+-- get likely faulty facility claims
+-- no more than 2 per given day (employed prof + fac)
+SELECT
+    member_id,
+    first_date_of_service,
+    --prof_indicator,
+    SUM(units) as summedunits,
+    MIN(mincode) as mmincode,
+    MAX(maxcode) as mmaxcode,
+    CASE WHEN mmincode=mmaxcode THEN FALSE ELSE TRUE END as codechange
+FROM allemlines
+GROUP BY
+    member_id,
+    first_date_of_service,
+    prof_indicator
+HAVING
+    prof_indicator=False AND summedunits &gt; 2 -- "sure" amount
+    -- Can also look for professional claims for "maybes"
+ORDER BY
+    member_id,
+    first_date_of_service
+-- LIMIT 1000
+;
+
+
+-- no more than 1 / spec / day
+SELECT
+    member_id,
+    first_date_of_service,
+    rendering_provider_specialty_code,
+    units,
+    mincode,
+    maxcode,
+    CASE WHEN mincode=maxcode THEN FALSE ELSE TRUE END as codechange
+FROM allemlines
+WHERE
+    prof_indicator=True
+    AND
+    units &gt; 2 -- "sure" amount, allowing for "unknowns"
+    -- units &gt; 1 -- "maybe" amount
+ORDER BY
+    member_id,
+    first_date_of_service,
+    rendering_provider_specialty_code
+-- LIMIT 1000
+</SQL>
+    <Name>Austin's EM code</Name>
+  </Query>
 </QuerySet>

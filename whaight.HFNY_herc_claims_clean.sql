@@ -563,7 +563,8 @@ INSERT INTO	whaight.HFNY_herc_claims_clean
 	FROM
 		ESRD_clean_raw.medical_claims		crmc
 	WHERE
-			DATEDIFF( DAY, '2017-05-01', first_DOS )	>=	0
+			TRUE
+--			DATEDIFF( DAY, '2017-05-01', first_DOS )	>=	0
 		AND	(		CPT_Code_1		IN ( 'J9355' )
 				OR	CPT_Code_2		IN ( 'J9355' )
 				OR	CPT_Code_3		IN ( 'J9355' )

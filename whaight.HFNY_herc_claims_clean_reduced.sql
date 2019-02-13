@@ -1,3 +1,6 @@
+
+
+
 DROP TABLE IF EXISTS	whaight.HFNY_herc_claims_clean_reduced;
 CREATE TABLE			whaight.HFNY_herc_claims_clean_reduced
 (		claim_ID						VARCHAR( 13 )		ENCODE	ZSTD
@@ -242,10 +245,9 @@ INSERT INTO	whaight.HFNY_herc_claims_clean_reduced
 		,	DHP_Proc_Code					::	VARCHAR(  6 )		AS	DHP_Proc_Code
 	FROM
 		whaight.HFNY_herc_claims_clean
-	WHERE
-		DATEDIFF( DAY, '2017-05-01', first_DOS )	>=	0
+--	WHERE
+--		DATEDIFF( DAY, '2017-05-01', first_DOS )	>=	0
 );
-
 --ANALYZE COMPRESSION		whaight.HFNY_herc_claims_clean_reduced;
 ANALYZE					whaight.HFNY_herc_claims_clean_reduced;
 VACUUM SORT ONLY		whaight.HFNY_herc_claims_clean_reduced;
@@ -253,8 +255,42 @@ ANALYZE					whaight.HFNY_herc_claims_clean_reduced;
 
 
 
+DROP TABLE IF EXISTS	whaight.HFNY_herc_member_claims_time_window;
+CREATE TABLE			whaight.HFNY_herc_member_claims_time_window
+(		claim_ID	VARCHAR( 13 )	ENCODE	ZSTD
+	,	member_ID	VARCHAR( 15 )	ENCODE	ZSTD
+	,	first_DOS	DATE			ENCODE	ZSTD
+)
+DISTSTYLE	KEY
+DISTKEY( member_ID )
+INTERLEAVED SORTKEY(
+		claim_ID
+	,	member_ID
+	,	first_DOS
+);
+
+
+
+INSERT INTO	whaight.HFNY_herc_member_claims_time_window
+(	SELECT
+			claim_ID	::	VARCHAR( 13 )	AS	claim_ID
+		,	member_ID	::	VARCHAR( 15 )	AS	member_ID
+		,	first_DOS	::	DATE			AS	first_DOS
+	FROM
+		whaight.HFNY_herc_claims_clean_reduced
+	WHERE
+		DATEDIFF( DAY, '2017-05-01', first_DOS )	>=	0
+);
+--ANALYZE COMPRESSION		whaight.HFNY_herc_member_claims_time_window;
+ANALYZE					whaight.HFNY_herc_member_claims_time_window;
+VACUUM SORT ONLY		whaight.HFNY_herc_member_claims_time_window;
+ANALYZE					whaight.HFNY_herc_member_claims_time_window;
+
+
+
 SELECT DISTINCT	COUNT( claim_ID )
 FROM			whaight.HFNY_herc_claims_clean_reduced;
+
 
 
 SELECT TOP	1	first_DOS
