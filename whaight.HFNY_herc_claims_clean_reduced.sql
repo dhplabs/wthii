@@ -1,6 +1,3 @@
-
-
-
 DROP TABLE IF EXISTS	whaight.HFNY_herc_claims_clean_reduced;
 CREATE TABLE			whaight.HFNY_herc_claims_clean_reduced
 (		claim_ID						VARCHAR( 13 )		ENCODE	ZSTD

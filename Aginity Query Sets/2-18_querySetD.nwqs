@@ -1,0 +1,2642 @@
+<QuerySet>
+  <Query IsView="False" IsSP="False">
+    <File>../Current%20Code/HFNY%20Herceptin/HFNY_history_level_herceptin_flags.sql</File>
+    <Name>HFNY_history_level_herceptin_flags</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <SQL>/********************************************************************************/
+/*																				*/
+/*	FILE:			HFNY_GEM_xwalks.sql											*/
+/*	PROGRAMMED BY:	Will Haight (wthii)											*/
+/*	DATE:			November, 2018												*/
+/*	NOTES:			The following tables are established in this file:			*/
+/*					whaight.HFNY_ICD9_to_ICD10_xwalk	(deleted)				*/
+/*					whaight.HFNY_ICD10_to_ICD9_xwalk	(deleted)				*/
+/*					whaight.HFNY_ICD9_descriptions		(deleted)				*/
+/*					whaight.HFNY_ICD10_descriptions		(deleted)				*/
+/*					whaight.HFNY_ICD9_to_ICD10_xwalk_desc						*/
+/*					whaight.HFNY_ICD10_to_ICD9_xwalk_desc						*/
+/*																				*/
+/*	MODIFICATIONS																*/
+/*																				*/
+/*		1.	BY:		wthii														*/
+/*			DATE:	12/14/2018													*/
+/*			NOTES:	Inserted documentation.										*/
+/*																				*/
+/*		2.	BY:																	*/
+/*			DATE:																*/
+/*			NOTES:																*/
+/*																				*/
+/********************************************************************************/
+
+
+
+/********************************************************************************/
+/*																				*/
+/*	The DROP &amp; CREATE below define the GEM xwalk table for "translating"		*/
+/*	ICD 9 codes to ICD 10 codes.												*/
+/*																				*/
+/********************************************************************************/
+DROP TABLE IF EXISTS	whaight.HFNY_ICD9_to_ICD10_xwalk;
+CREATE TABLE			whaight.HFNY_ICD9_to_ICD10_xwalk
+(		icd9cm			VARCHAR( 5 )	ENCODE	RAW
+	,	icd10cm			VARCHAR( 7 )	ENCODE	RAW
+	,	flags			VARCHAR( 5 )	ENCODE	RAW
+)
+COMPOUND SORTKEY(
+		icd9cm
+	,	icd10cm
+);
+
+
+
+/********************************************************************************/
+/*																				*/
+/*	This command copies raw data from an S3 bucket at amazon into the table		*/
+/*	whaight.HFNY_ICD9_to_ICD10_xwalk.  											*/
+/*																				*/
+/********************************************************************************/
+COPY		whaight.HFNY_ICD9_to_ICD10_xwalk
+FROM		's3://dhp-randlab-s3/users/whaight/2018_I9gem.txt'
+credentials 'aws_iam_role=arn:aws:iam::722648170004:role/Data_Wranglers'
+ACCEPTANYDATE ACCEPTINVCHARS '^' BLANKSASNULL EMPTYASNULL NULL AS 'NULL' IGNOREBLANKLINES DATEFORMAT 'auto'
+IGNOREHEADER 0 TRIMBLANKS DELIMITER '\t' STATUPDATE ON MAXERROR 0 COMPUPDATE ON;
+
+--ANALYZE COMPRESSION	whaight.HFNY_ICD9_to_ICD10_xwalk;
+ANALYZE				whaight.HFNY_ICD9_to_ICD10_xwalk;
+VACUUM SORT ONLY	whaight.HFNY_ICD9_to_ICD10_xwalk;
+ANALYZE				whaight.HFNY_ICD9_to_ICD10_xwalk;
+
+
+
+/********************************************************************************/
+/*																				*/
+/*	The DROP &amp; CREATE below define the GEM xwalk table for "translating"		*/
+/*	ICD 10 codes to ICD 9 codes.												*/
+/*																				*/
+/********************************************************************************/
+DROP TABLE IF EXISTS	whaight.HFNY_ICD10_to_ICD9_xwalk;
+CREATE TABLE			whaight.HFNY_ICD10_to_ICD9_xwalk
+(		icd10cm		VARCHAR( 6 )	ENCODE	RAW
+	,	icd9cm		VARCHAR( 7 )	ENCODE	RAW
+	,	flags		VARCHAR( 5 )	ENCODE	RAW
+)
+COMPOUND SORTKEY(
+		icd9cm
+	,	icd10cm
+);
+
+
+
+/********************************************************************************/
+/*																				*/
+/*	This command copies raw data from an S3 bucket at amazon into the table		*/
+/*	whaight.HFNY_ICD9_to_ICD10_xwalk.  											*/
+/*																				*/
+/********************************************************************************/
+COPY			whaight.HFNY_ICD10_to_ICD9_xwalk
+FROM			's3://dhp-randlab-s3/users/whaight/2018_I10gem.txt'
+credentials 'aws_iam_role=arn:aws:iam::722648170004:role/Data_Wranglers'
+ACCEPTANYDATE ACCEPTINVCHARS '^' BLANKSASNULL EMPTYASNULL NULL AS 'NULL' IGNOREBLANKLINES DATEFORMAT 'auto'
+IGNOREHEADER 0 TRIMBLANKS DELIMITER '\t' STATUPDATE ON MAXERROR 0 COMPUPDATE ON;
+
+--ANALYZE COMPRESSION	whaight.HFNY_ICD9_to_ICD10_xwalk;
+ANALYZE				whaight.HFNY_ICD9_to_ICD10_xwalk;
+VACUUM SORT ONLY	whaight.HFNY_ICD9_to_ICD10_xwalk;
+ANALYZE				whaight.HFNY_ICD9_to_ICD10_xwalk;
+
+
+
+/********************************************************************************/
+/*																				*/
+/*	Some queries useful in debugging.  											*/
+/*																				*/
+/********************************************************************************/
+--select	* from	stl_load_errors	order by starttime desc;
+
+--SELECT		MAX( LEN( icd10cm ) )	icd10
+--		,	MAX( LEN( icd9cm ) )	icd9
+--		,	MAX( LEN( flags ) )		flags
+--FROM	whaight.HFNY_ICD10_to_ICD9_xwalk;
+
+
+
+/********************************************************************************/
+/*																				*/
+/*	The DROP &amp; CREATE below define a table to receive icd9 code descriptions.	*/
+/*																				*/
+/********************************************************************************/
+DROP TABLE IF EXISTS	whaight.HFNY_ICD9_descriptions;
+CREATE TABLE			whaight.HFNY_ICD9_descriptions
+(		icd9cm		VARCHAR(   5 )	ENCODE	RAW
+	,	long_desc	VARCHAR( 224 )	ENCODE	ZSTD
+	,	short_desc	VARCHAR(  27 )	ENCODE	RAW
+)
+COMPOUND SORTKEY( icd9cm );
+
+
+
+/********************************************************************************/
+/*																				*/
+/*	This command copies raw data from an S3 bucket at amazon into the table		*/
+/*	whaight.HFNY_ICD9_descriptions.  											*/
+/*																				*/
+/********************************************************************************/
+COPY			whaight.HFNY_ICD9_descriptions
+FROM			's3://dhp-randlab-s3/users/whaight/ICD9_DESC_LONG_SHORT_DX.txt'
+credentials 'aws_iam_role=arn:aws:iam::722648170004:role/Data_Wranglers'
+ACCEPTANYDATE ACCEPTINVCHARS '^' BLANKSASNULL EMPTYASNULL NULL AS 'NULL' IGNOREBLANKLINES DATEFORMAT 'auto'
+IGNOREHEADER 1 TRIMBLANKS DELIMITER '\t' STATUPDATE ON MAXERROR 0 COMPUPDATE ON;
+
+--ANALYZE COMPRESSION	whaight.HFNY_ICD9_descriptions;
+ANALYZE				whaight.HFNY_ICD9_descriptions;
+VACUUM SORT ONLY	whaight.HFNY_ICD9_descriptions;
+ANALYZE				whaight.HFNY_ICD9_descriptions;
+
+
+
+/********************************************************************************/
+/*																				*/
+/*	Some queries useful in debugging.  											*/
+/*																				*/
+/********************************************************************************/
+--SELECT		MAX( LEN( icd9cm ) )		icd9cm
+--		,	MAX( LEN( long_desc ) )		long_desc
+--		,	MAX( LEN( short_desc ) )	short_desc
+--FROM	whaight.HFNY_ICD9_descriptions;
+
+--select	* from	stl_load_errors	order by starttime desc;
+
+
+
+/********************************************************************************/
+/*																				*/
+/*	The DROP &amp; CREATE below define a table to receive icd10 code descriptions.	*/
+/*																				*/
+/********************************************************************************/
+DROP TABLE IF EXISTS	whaight.HFNY_ICD10_descriptions;
+CREATE TABLE			whaight.HFNY_ICD10_descriptions
+(		icd10cm		VARCHAR(   7 )	ENCODE	ZSTD
+	,	long_desc	VARCHAR( 230 )	ENCODE	ZSTD
+)
+COMPOUND SORTKEY( icd10cm );
+
+
+
+/********************************************************************************/
+/*																				*/
+/*	This command copies raw data from an S3 bucket at amazon into the table		*/
+/*	whaight.HFNY_ICD9_descriptions.  											*/
+/*																				*/
+/********************************************************************************/
+COPY			whaight.HFNY_ICD10_descriptions
+FROM			's3://dhp-randlab-s3/users/whaight/icd10cm_codes_2019_desc.txt'
+credentials 'aws_iam_role=arn:aws:iam::722648170004:role/Data_Wranglers'
+ACCEPTANYDATE ACCEPTINVCHARS '^' BLANKSASNULL EMPTYASNULL NULL AS 'NULL' IGNOREBLANKLINES DATEFORMAT 'auto'
+IGNOREHEADER 0 TRIMBLANKS DELIMITER '\t' STATUPDATE ON MAXERROR 0 COMPUPDATE ON;
+
+--ANALYZE COMPRESSION	whaight.HFNY_ICD10_descriptions;
+ANALYZE				whaight.HFNY_ICD10_descriptions;
+VACUUM SORT ONLY	whaight.HFNY_ICD10_descriptions;
+ANALYZE				whaight.HFNY_ICD10_descriptions;
+
+
+
+/********************************************************************************/
+/*																				*/
+/*	Some queries useful in debugging.  											*/
+/*																				*/
+/********************************************************************************/
+--SELECT	MAX( LEN( icd10cm ) )		icd10cm
+--		,	MAX( LEN( long_desc ) )		long_desc
+--FROM	whaight.HFNY_ICD10_descriptions;
+
+--select	* from	stl_load_errors	order by starttime desc;
+
+
+
+/********************************************************************************/
+/*																				*/
+/*	The DROP &amp; CREATE below define an enhanced GEM xwalk table (icd9 to icd10)	*/
+/*	including both sets of code descriptions.									*/
+/*																				*/
+/********************************************************************************/
+DROP TABLE IF EXISTS	whaight.HFNY_ICD9_to_ICD10_xwalk_desc;
+CREATE TABLE			whaight.HFNY_ICD9_to_ICD10_xwalk_desc
+(		icd9cm		VARCHAR(   7 )	ENCODE	RAW
+	,	icd10cm		VARCHAR(   7 )	ENCODE	RAW
+	,	flags		VARCHAR(   5 )	ENCODE	RAW
+	,	icd9_desc	VARCHAR( 230 )	ENCODE	ZSTD
+	,	icd10_desc	VARCHAR( 230 )	ENCODE	ZSTD
+)
+COMPOUND SORTKEY(
+		icd9cm
+	,	icd10cm
+);
+
+
+
+/********************************************************************************/
+/*																				*/
+/*	The INSERT below populates the table defined immediately above.  Note the	*/
+/*	joins for adding the description columns to the previously established		*/
+/*	xwalk.																		*/
+/*																				*/
+/********************************************************************************/
+INSERT INTO	whaight.HFNY_ICD9_to_ICD10_xwalk_desc
+(	SELECT		xw.icd9cm			::	VARCHAR(   7 )	AS	icd9cm
+			,	xw.icd10cm			::	VARCHAR(   7 )	AS	icd10cm
+			,	CASE	xw.flags
+					WHEN	'0'	THEN	'00000'
+					ELSE				xw.flags
+				END					::	VARCHAR(   5 )	AS	flags
+			,	icd9.long_desc		::	VARCHAR( 230 )	AS	icd9_desc
+			,	icd10.long_desc		::	VARCHAR( 230 )	AS	icd10_desc
+	FROM				whaight.HFNY_ICD9_to_ICD10_xwalk	xw
+			LEFT JOIN	whaight.HFNY_ICD9_descriptions		icd9
+			ON			xw.icd9cm	=	icd9.icd9cm
+			LEFT JOIN	whaight.HFNY_ICD10_descriptions		icd10
+			ON			xw.icd10cm	=	icd10.icd10cm
+);
+--ANALYZE COMPRESSION	whaight.HFNY_ICD9_to_ICD10_xwalk_desc;
+ANALYZE				whaight.HFNY_ICD9_to_ICD10_xwalk_desc;
+VACUUM SORT ONLY	whaight.HFNY_ICD9_to_ICD10_xwalk_desc;
+ANALYZE				whaight.HFNY_ICD9_to_ICD10_xwalk_desc;
+
+
+
+/********************************************************************************/
+/*																				*/
+/*	The DROP &amp; CREATE below define an enhanced GEM xwalk table (icd10 to icd9)	*/
+/*	including both sets of code descriptions.									*/
+/*																				*/
+/********************************************************************************/
+DROP TABLE IF EXISTS	whaight.HFNY_ICD10_to_ICD9_xwalk_desc;
+CREATE TABLE			whaight.HFNY_ICD10_to_ICD9_xwalk_desc
+(		icd10cm		VARCHAR(   7 )	ENCODE	ZSTD
+	,	icd9cm		VARCHAR(   7 )	ENCODE	ZSTD
+	,	flags		VARCHAR(   5 )	ENCODE	ZSTD
+	,	icd9_desc	VARCHAR( 230 )	ENCODE	ZSTD
+	,	icd10_desc	VARCHAR( 230 )	ENCODE	ZSTD
+)
+COMPOUND SORTKEY(
+		icd9cm
+	,	icd10cm
+);
+
+
+
+/********************************************************************************/
+/*																				*/
+/*	The INSERT below populates the table defined immediately above.  Note the	*/
+/*	joins for adding the description columns to the previously established		*/
+/*	xwalk.																		*/
+/*																				*/
+/********************************************************************************/
+INSERT INTO		whaight.HFNY_ICD10_to_ICD9_xwalk_desc
+(	SELECT		xw.icd10cm			::	VARCHAR(   7 )	AS	icd10cm
+			,	xw.icd9cm			::	VARCHAR(   7 )	AS	icd9cm
+			,	CASE	xw.flags
+					WHEN	'0'	THEN	'00000'
+					ELSE				xw.flags
+				END					::	VARCHAR(   5 )	AS	flags
+			,	icd9.long_desc		::	VARCHAR( 230 )	AS	icd9_desc
+			,	icd10.long_desc		::	VARCHAR( 230 )	AS	icd10_desc
+	FROM				whaight.HFNY_ICD10_to_ICD9_xwalk	xw
+			LEFT JOIN	whaight.HFNY_ICD9_descriptions		icd9
+			ON			xw.icd9cm	=	icd9.icd9cm
+			LEFT JOIN	whaight.HFNY_ICD10_descriptions		icd10
+			ON			xw.icd10cm	=	icd10.icd10cm
+);
+--ANALYZE COMPRESSION	whaight.HFNY_ICD10_to_ICD9_xwalk_desc;
+ANALYZE				whaight.HFNY_ICD10_to_ICD9_xwalk_desc;
+VACUUM SORT ONLY	whaight.HFNY_ICD10_to_ICD9_xwalk_desc;
+ANALYZE				whaight.HFNY_ICD10_to_ICD9_xwalk_desc;
+
+
+
+/********************************************************************************/
+/*																				*/
+/*	These tables are dropped because they were only necessary to build the		*/
+/*	tables whaight.HFNY_ICD10_to_ICD9_xwalk_desc and							*/
+/*	whaight.HFNY_ICD9_to_ICD10_xwalk_desc										*/
+/*																				*/
+/********************************************************************************/
+DROP TABLE IF EXISTS	whaight.HFNY_ICD9_to_ICD10_xwalk;
+DROP TABLE IF EXISTS	whaight.HFNY_ICD10_to_ICD9_xwalk;
+DROP TABLE IF EXISTS	whaight.HFNY_ICD9_descriptions;
+DROP TABLE IF EXISTS	whaight.HFNY_ICD10_descriptions;
+
+
+
+/********************************************************************************/
+/*																				*/
+/*	Make sure the right people can get at this table.							*/
+/*																				*/
+/********************************************************************************/
+GRANT USAGE
+ON SCHEMA		whaight
+TO				aprivett;
+GRANT SELECT
+ON TABLE		whaight.HFNY_ICD9_to_ICD10_xwalk_desc
+TO				aprivett;
+GRANT SELECT
+ON TABLE		whaight.HFNY_ICD10_to_ICD9_xwalk_desc
+TO				aprivett;
+
+
+
+</SQL>
+    <Name>HFNY_GEM_xwalks.sql</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <File>../Current%20Code/whaight.HFNY_herc_claims_clean.sql</File>
+    <Name>whaight.HFNY_herc_claims_clean</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <File>../HFNY_claim_Level_Herceptin_Flags.sql</File>
+    <Name>HFNY_claim_Level_Herceptin_Flags</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <File>../Current%20Code/whaight.HFNY_herc_claims_clean_reduced_aprivett.sql</File>
+    <Name>whaight.HFNY_herc_claims_clean_reduced_aprivett</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <SQL>DROP TABLE IF EXISTS	whaight.HFNY_claims_clean_ICD10;
+CREATE TABLE			whaight.HFNY_claims_clean_ICD10
+(		claim_ID						VARCHAR( 13 )		ENCODE	ZSTD
+	,	adj_Claim						VARCHAR( 13 )		ENCODE	ZSTD
+	,	claim_Status					VARCHAR(  1 )		ENCODE	ZSTD
+	,	claim_Type						VARCHAR(  1 )		ENCODE	ZSTD
+	,	check_Num						VARCHAR( 11 )		ENCODE	ZSTD
+	,	check_Date						DATE				ENCODE	ZSTD
+	,	processed_Date					DATE				ENCODE	ZSTD
+	,	received_Date					DATE				ENCODE	ZSTD
+	,	member_ID						VARCHAR( 15 )		ENCODE	ZSTD
+	,	ci_ID							VARCHAR( 15 )		ENCODE	ZSTD
+	,	admit_Date						DATE				ENCODE	ZSTD
+	,	admit_Hour						VARCHAR(  1 )		ENCODE	LZO
+	,	admit_Source					VARCHAR(  1 )		ENCODE	ZSTD
+	,	admit_Type						VARCHAR(  2 )		ENCODE	ZSTD
+	,	discharge_Date					DATE				ENCODE	ZSTD
+	,	discharge_Hour 					VARCHAR(  1 )		ENCODE	LZO
+	,	discharge_Status				VARCHAR(  2 )		ENCODE	ZSTD
+	,	acct_Plan_Group_ID				VARCHAR( 12 )		ENCODE	BYTEDICT
+	,	bill_Type						VARCHAR(  3 )		ENCODE	ZSTD
+	,	invoice_Num						VARCHAR(  1 )		ENCODE	LZO
+	,	claim_Submitted_charge_Amt		NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	claim_Disallowed_Amt			NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	disallowed_Reason_1				VARCHAR(  1 )		ENCODE	LZO
+	,	disallowed_Reason_2				VARCHAR(  1 )		ENCODE	LZO
+	,	disallowed_Reason_3				VARCHAR(  1 )		ENCODE	LZO
+	,	claim_Allowed_Amt				NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	claim_Paid_Amt					NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	ICD_Code_Type					VARCHAR(  1 )		ENCODE	ZSTD
+	,	principal_Proc_Code				VARCHAR(  7 )		ENCODE	ZSTD
+	,	principal_Proc_Date				DATE				ENCODE	ZSTD
+	,	ICD_Proc_Code_2					VARCHAR(  7 )		ENCODE	ZSTD
+	,	ICD_Proc_Date_2					DATE				ENCODE	ZSTD
+	,	ICD_Proc_Code_3					VARCHAR(  7 )		ENCODE	ZSTD
+	,	ICD_Proc_Date_3					DATE				ENCODE	ZSTD
+	,	ICD_Proc_Code_4					VARCHAR(  7 )		ENCODE	ZSTD
+	,	ICD_Proc_Date_4					DATE				ENCODE	ZSTD
+	,	ICD_Proc_Code_5					VARCHAR(  7 )		ENCODE	ZSTD
+	,	ICD_Proc_Date_5					DATE				ENCODE	ZSTD
+	,	ICD_Proc_Code_6					VARCHAR(  7 )		ENCODE	ZSTD
+	,	ICD_Proc_Date_6					DATE				ENCODE	ZSTD
+	,	CPT_Code_1						VARCHAR(  6 )		ENCODE	BYTEDICT
+	,	CPT_Date_1						DATE				ENCODE	ZSTD
+	,	CPT_Code_2						VARCHAR(  6 )		ENCODE	LZO
+	,	CPT_Date_2						DATE				ENCODE	ZSTD
+	,	CPT_Code_3						VARCHAR(  6 )		ENCODE	LZO
+	,	CPT_Date_3						DATE				ENCODE	ZSTD
+	,	CPT_Code_4						VARCHAR(  6 )		ENCODE	LZO
+	,	CPT_Date_4						DATE				ENCODE	ZSTD
+	,	CPT_Code_5						VARCHAR(  6 )		ENCODE	LZO
+	,	CPT_Date_5						DATE				ENCODE	ZSTD
+	,	ICD_DX_Code_Admitting			VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_Primary				VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_2					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_3					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_4					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_5					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_6					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_7					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_8					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_9					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_10					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_11 					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_12					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_13					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_14					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_15					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_16					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_17					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_18					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_19					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_20					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_21					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_22					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_23					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_24					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_25					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_26					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_27					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_28					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_29					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_30					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_31					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_32					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_33					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_34					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_35					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_36					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_37					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_38					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_39					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_40					VARCHAR(  8 )		ENCODE	LZO
+	,	DRG_Code						VARCHAR(  5 )		ENCODE	ZSTD
+	,	DRG_Version						VARCHAR(  1 )		ENCODE	LZO
+	,	accident_Date					DATE				ENCODE	ZSTD
+	,	ER_Flag							VARCHAR(  1 )		ENCODE	ZSTD
+	,	MVA_Flag						VARCHAR(  1 )		ENCODE	LZO
+	,	work_Comp_Flag					VARCHAR(  1 )		ENCODE	LZO
+	,	accident_Flag					VARCHAR(  1 )		ENCODE	LZO
+	,	accident_State					VARCHAR(  2 )		ENCODE	LZO
+	,	accident_Hour					VARCHAR(  2 )		ENCODE	LZO
+	,	in_Network_Flag					VARCHAR(  1 )		ENCODE	ZSTD
+	,	referring_Provider_ID			VARCHAR(  1 )		ENCODE	LZO
+	,	billing_Provider_ID				VARCHAR( 15 )		ENCODE	BYTEDICT
+	,	prov_Patient_Acct_Num			VARCHAR( 20 )		ENCODE	ZSTD
+	,	med_Record_Num					VARCHAR( 30 )		ENCODE	ZSTD
+	,	occ_Code_1						VARCHAR(  2 )		ENCODE	ZSTD
+	,	occ_Code_1_Date					DATE				ENCODE	ZSTD
+	,	occ_Code_2						VARCHAR(  2 )		ENCODE	ZSTD
+	,	occ_Code_2_Date					DATE				ENCODE	ZSTD
+	,	occ_Code_3						VARCHAR(  2 )		ENCODE	ZSTD
+	,	occ_Code_3_Date					DATE				ENCODE	ZSTD
+	,	occ_Code_4						VARCHAR(  2 )		ENCODE	ZSTD
+	,	occ_Code_4_Date					DATE				ENCODE	ZSTD
+	,	occ_Span_Code_1					VARCHAR(  2 )		ENCODE	ZSTD
+	,	occ_Span_Code_1_From_Date		DATE				ENCODE	ZSTD
+	,	occ_Span_Code_1_To_Date			DATE				ENCODE	ZSTD
+	,	occ_Span_Code_2					VARCHAR(  2 )		ENCODE	ZSTD
+	,	occ_Span_Code_2_From_Date		DATE				ENCODE	ZSTD
+	,	occ_Span_Code_2_To_Date			DATE				ENCODE	ZSTD
+	,	cond_Code_1						VARCHAR(  2 )		ENCODE	ZSTD
+	,	cond_Code_2						VARCHAR(  2 )		ENCODE	ZSTD
+	,	cond_Code_3						VARCHAR(  2 )		ENCODE	ZSTD
+	,	cond_Code_4						VARCHAR(  2 )		ENCODE	ZSTD
+	,	cond_Code_5						VARCHAR(  2 )		ENCODE	ZSTD
+	,	cond_Code_6						VARCHAR(  2 )		ENCODE	LZO
+	,	cond_Code_7						VARCHAR(  2 )		ENCODE	LZO
+	,	cond_Code_8						VARCHAR(  2 )		ENCODE	LZO
+	,	cond_Code_9						VARCHAR(  2 )		ENCODE	LZO
+	,	cond_Code_10					VARCHAR(  2 )		ENCODE	LZO
+	,	cond_Code_11					VARCHAR(  2 )		ENCODE	LZO
+	,	cond_Code_12					VARCHAR(  2 )		ENCODE	LZO
+	,	value_Code_1					VARCHAR(  2 )		ENCODE	ZSTD
+	,	value_Code_1_Amt				NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	value_Code_2					VARCHAR(  2 )		ENCODE	ZSTD
+	,	value_Code_2_Amt				NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	value_Code_3					VARCHAR(  2 )		ENCODE	ZSTD
+	,	value_Code_3_Amt				NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	value_Code_4					VARCHAR(  2 )		ENCODE	ZSTD
+	,	value_Code_4_Amt				NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	value_Code_5					VARCHAR(  2 )		ENCODE	ZSTD
+	,	value_Code_5_Amt				NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	value_Code_6					VARCHAR(  2 )		ENCODE	ZSTD
+	,	value_Code_6_Amt				NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	value_Code_7					VARCHAR(  2 )		ENCODE	ZSTD
+	,	value_Code_7_Amt				NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	value_Code_8					VARCHAR(  2 )		ENCODE	ZSTD
+	,	value_Code_8_Amt				NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	value_Code_9					VARCHAR(  2 )		ENCODE	ZSTD
+	,	value_Code_9_Amt				NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	value_Code_10					VARCHAR(  2 )		ENCODE	LZO
+	,	value_Code_10_Amt				NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	value_Code_11					VARCHAR(  2 )		ENCODE	LZO
+	,	value_Code_11_Amt				NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	value_Code_12					VARCHAR(  2 )		ENCODE	LZO
+	,	value_Code_12_Amt				NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	payee_Code						VARCHAR(  1 )		ENCODE	ZSTD
+	,	line_Num						VARCHAR(  3 )		ENCODE	ZSTD
+	,	DX_Code_pointer_1				VARCHAR(  2 )		ENCODE	LZO
+	,	DX_Code_pointer_2				VARCHAR(  2 )		ENCODE	LZO
+	,	DX_Code_pointer_3				VARCHAR(  2 )		ENCODE	LZO
+	,	DX_Code_pointer_4				VARCHAR(  2 )		ENCODE	LZO
+	,	procedure_Code					VARCHAR(  6 )		ENCODE	BYTEDICT
+	,	procedure_Code_modifier_1		VARCHAR(  2 )		ENCODE	ZSTD
+	,	procedure_Code_modifier_2		VARCHAR(  2 )		ENCODE	ZSTD
+	,	procedure_Code_modifier_3		VARCHAR(  2 )		ENCODE	ZSTD
+	,	procedure_Code_modifier_4		VARCHAR(  2 )		ENCODE	LZO
+	,	revenue_Code					VARCHAR(  1 )		ENCODE	LZO
+	,	accommodation_Revenue_Code		VARCHAR(  1 )		ENCODE	LZO
+	,	accommodation_Rate				VARCHAR(  1 )		ENCODE	LZO
+	,	ancillary_Revenue_Code			VARCHAR(  1 )		ENCODE	LZO
+	,	emergency_Indicator				VARCHAR(  1 )		ENCODE	ZSTD
+	,	NDC_Code						VARCHAR(  1 )		ENCODE	LZO
+	,	date_Written					DATE				ENCODE	ZSTD
+	,	first_DOS						DATE				ENCODE	ZSTD
+	,	last_DOS						DATE				ENCODE	ZSTD
+	,	units							VARCHAR(  9 )		ENCODE	ZSTD
+	,	anaesthesia						VARCHAR(  1 )		ENCODE	LZO
+	,	charge_Amt						NUMERIC( 11, 2 )	ENCODE	ZSTD
+	,	allowed_Amt						NUMERIC( 11, 2 )	ENCODE	ZSTD
+	,	not_Allowed_Amt					NUMERIC( 11, 2 )	ENCODE	ZSTD
+	,	deductible_Amt					NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	copay_Amt						NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	coinsurance_Amt					NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	would_Pay_Amt					NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	benefit_Amt						NUMERIC( 11, 2 )	ENCODE	ZSTD
+	,	prov_Discount_Amt				NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	place_Of_Service				VARCHAR(  2 )		ENCODE	ZSTD
+	,	type_Of_Service					VARCHAR(  2 )		ENCODE	ZSTD
+	,	perf_Provider_ID				VARCHAR( 15 )		ENCODE	ZSTD
+	,	COB_Indicator					VARCHAR(  1 )		ENCODE	LZO
+	,	COB_Amt							NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	COB_Payer						VARCHAR(  3 )		ENCODE	ZSTD
+	,	COB_Date						DATE				ENCODE	ZSTD
+	,	capitated_Indicator				VARCHAR(  1 )		ENCODE	ZSTD
+	,	remarks							VARCHAR(  1 )		ENCODE	LZO
+	,	claim_Client_Spec_Field_1		VARCHAR(  1 )		ENCODE	LZO
+	,	claim_Client_Spec_Field_2		VARCHAR(  1 )		ENCODE	LZO
+	,	claim_Client_Spec_Field_3		VARCHAR(  1 )		ENCODE	LZO
+	,	claim_Client_Spec_Field_4		VARCHAR(  1 )		ENCODE	LZO
+	,	claim_Client_Spec_Field_5		VARCHAR(  1 )		ENCODE	LZO
+	,	claim_Client_Spec_Field_6		VARCHAR(  1 )		ENCODE	LZO
+	,	claim_Client_Spec_Field_7		VARCHAR(  1 )		ENCODE	LZO
+	,	claim_Client_Spec_Field_8		VARCHAR(  1 )		ENCODE	LZO
+	,	claim_Client_Spec_Field_9		VARCHAR(  1 )		ENCODE	LZO
+	,	claim_Client_Spec_Field_10		VARCHAR(  1 )		ENCODE	LZO
+	,	DHP_Ch_LDOS						DATE				ENCODE	ZSTD
+	,	DHP_Med_Claim_Load_Month		INTEGER				ENCODE	LZO
+	,	DHP_ci_ID						VARCHAR( 15 )		ENCODE	ZSTD
+	,	DHP_s_ID						VARCHAR( 15 )		ENCODE	ZSTD
+	,	DHP_a_ID						VARCHAR( 12 )		ENCODE	BYTEDICT
+	,	DHP_Paid_Amt					NUMERIC( 11, 2 )	ENCODE	ZSTD
+	,	DHP_Performing_Provider_ID		VARCHAR( 17 )		ENCODE	ZSTD
+	,	DHP_Billing_Provider_ID			VARCHAR( 17 )		ENCODE	BYTEDICT
+	,	DHP_CH_Claim_Status_CD			VARCHAR(  1 )		ENCODE	ZSTD
+	,	DHP_Client_Capitated_Indicator	INTEGER				ENCODE	ZSTD
+	,	DHP_CH_ER_Indicator				INTEGER				ENCODE	ZSTD
+	,	DHP_CH_MVA_Indicator			INTEGER				ENCODE	ZSTD
+	,	DHP_CH_Acc_Indicator			INTEGER				ENCODE	ZSTD
+	,	DHP_CH_Amb_Indicator			INTEGER				ENCODE	ZSTD
+	,	DHP_CH_WC_Indicator				INTEGER				ENCODE	ZSTD
+	,	DHP_CH_COB_Indicator			INTEGER				ENCODE	ZSTD
+	,	DHP_Check_Num					INTEGER				ENCODE	ZSTD
+	,	CH_Acct_1_Segment				VARCHAR(  7 )		ENCODE	ZSTD
+	,	CH_Acct_2_Segment				VARCHAR( 30 )		ENCODE	BYTEDICT
+	,	CH_Acct_3_Segment				VARCHAR(  7 )		ENCODE	BYTEDICT
+	,	CH_Acct_4_Segment				VARCHAR(  7 )		ENCODE	BYTEDICT
+	,	CH_Acct_5_Segment				VARCHAR(  7 )		ENCODE	ZSTD
+	,	CH_Acct_Name					VARCHAR( 29 )		ENCODE	BYTEDICT
+	,	A_Funding_CD					VARCHAR( 13 )		ENCODE	ZSTD
+	,	cycle_SK						INTEGER				ENCODE	ZSTD
+	,	EIC_SK							INTEGER				ENCODE	ZSTD
+	,	CL_SK							INTEGER				ENCODE	ZSTD
+	,	cycle_Created_Date				DATE				ENCODE	ZSTD
+	,	filename						VARCHAR( 39 )		ENCODE	ZSTD
+	,	DHP_CH_Claim_Num				VARCHAR( 27 )		ENCODE	ZSTD
+	,	DHP_CH_Claim_Line_Num			VARCHAR(  3 )		ENCODE	ZSTD
+	,	DHP_Claim_Form_Type				INTEGER				ENCODE	ZSTD
+	,	DHP_Charge_Amt					NUMERIC( 11, 2 )	ENCODE	ZSTD
+	,	CH_Payment_Status_CD_SK			INTEGER				ENCODE	ZSTD
+	,	CH_Received_Date				DATE				ENCODE	ZSTD
+	,	EIC_Extract_Date				DATE				ENCODE	ZSTD
+	,	DHP_Client_Status_CD			VARCHAR(  1 )		ENCODE	LZO
+	,	DHP_Claim_Status				VARCHAR(  1 )		ENCODE	ZSTD
+	,	DHP_Proc_Code					VARCHAR(  6 )		ENCODE	BYTEDICT
+)
+DISTSTYLE KEY
+DISTKEY( ci_ID )
+INTERLEAVED SORTKEY(
+		claim_ID
+	,	ICD_Code_Type
+	,	first_DOS
+	,	perf_Provider_ID
+	,	billing_Provider_ID
+);
+
+
+
+INSERT INTO	whaight.HFNY_claims_clean_ICD10
+(	SELECT
+			clms.claim_ID						::	VARCHAR( 13 )		AS	claim_ID
+		,	clms.adj_Claim						::	VARCHAR( 13 )		AS	adj_Claim
+		,	clms.claim_Status					::	VARCHAR(  1 )		AS	claim_Status	-- Values are 'D' and 'F'
+		,	clms.claim_Type						::	VARCHAR(  1 )		AS	claim_Type		-- Values are 'I' and 'P'
+		,	clms.check_Num						::	VARCHAR( 11 )		AS	check_Num
+		,	clms.check_Date						::	DATE				AS	check_Date	
+		,	clms.processed_Date					::	DATE				AS	processed_Date
+		,	clms.received_Date					::	DATE				AS	received_Date
+		,	clms.member_ID						::	VARCHAR( 15 )		AS	member_ID
+		,	clms.ci_ID							::	VARCHAR( 15 )		AS	ci_ID
+		,	clms.admit_Date						::	DATE				AS	admit_Date
+		,	clms.admit_Hour						::	VARCHAR(  2 )		AS	admit_Hour
+		,	clms.admit_Source					::	VARCHAR(  1 )		AS	admit_Source
+		,	clms.admit_Type						::	VARCHAR(  2 )		AS	admit_Type
+		,	clms.discharge_Date					::	DATE				AS	discharge_Date
+		,	clms.discharge_Hour 				::	VARCHAR(  2 )		AS	discharge_Hour
+		,	clms.discharge_Status				::	VARCHAR(  2 )		AS	discharge_Status
+		,	clms.acct_Plan_Group_ID				::	VARCHAR( 12 )		AS	acct_Plan_Group_ID
+		,	clms.bill_Type						::	VARCHAR(  3 )		AS	bill_Type
+		,	clms.invoice_Num					::	VARCHAR(  1 )		AS	invoice_Num
+		,	clms.claim_Submitted_charge_Amt		::	NUMERIC( 10, 2 )	AS	claim_Submitted_charge_Amt
+		,	clms.claim_Disallowed_Amt			::	NUMERIC( 10, 2 )	AS	claim_Disallowed_Amt
+		,	clms.disallowed_Reason_1			::	VARCHAR(  1 )		AS	disallowed_Reason_1
+		,	clms.disallowed_Reason_2			::	VARCHAR(  1 )		AS	disallowed_Reason_2
+		,	clms.disallowed_Reason_3			::	VARCHAR(  1 )		AS	disallowed_Reason_3
+		,	clms.claim_Allowed_Amt				::	NUMERIC( 10, 2 )	AS	claim_Allowed_Amt
+		,	clms.claim_Paid_Amt					::	NUMERIC( 10, 2 )	AS	claim_Paid_Amt
+		,	clms.ICD_Code_Type					::	VARCHAR(  1 )		AS	ICD_Code_Type
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.principal_Proc_Code
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.principal_Proc_Code	)
+			END									::	VARCHAR(  7 )		AS	principal_Proc_Code
+		,	clms.principal_Proc_Date			::	DATE				AS	principal_Proc_Date
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_Proc_Code_2
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_Proc_Code_2	)
+			END									::	VARCHAR(  7 )		AS	ICD_Proc_Code_2
+		,	clms.ICD_Proc_Date_2				::	DATE				AS	ICD_Proc_Date_2
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_Proc_Code_3
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_Proc_Code_3	)
+			END									::	VARCHAR(  7 )		AS	ICD_Proc_Code_3
+		,	clms.ICD_Proc_Date_3				::	DATE				AS	ICD_Proc_Date_3
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_Proc_Code_4
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_Proc_Code_4	)
+			END									::	VARCHAR(  7 )		AS	ICD_Proc_Code_4
+		,	clms.ICD_Proc_Date_4				::	DATE				AS	ICD_Proc_Date_4
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_Proc_Code_5
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_Proc_Code_5	)
+			END									::	VARCHAR(  7 )		AS	ICD_Proc_Code_5
+		,	clms.ICD_Proc_Date_5				::	DATE				AS	ICD_Proc_Date_5
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_Proc_Code_6
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_Proc_Code_6	)
+			END									::	VARCHAR(  7 )		AS	ICD_Proc_Code_6
+		,	clms.ICD_Proc_Date_6				::	DATE				AS	ICD_Proc_Date_6
+		,	clms.CPT_Code_1						::	VARCHAR(  6 )		AS	CPT_Code_1
+		,	clms.CPT_Date_1						::	DATE				AS	CPT_Date_1
+		,	clms.CPT_Code_2						::	VARCHAR(  6 )		AS	CPT_Code_2
+		,	clms.CPT_Date_2						::	DATE				AS	CPT_Date_2
+		,	clms.CPT_Code_3						::	VARCHAR(  6 )		AS	CPT_Code_3
+		,	clms.CPT_Date_3						::	DATE				AS	CPT_Date_3
+		,	clms.CPT_Code_4						::	VARCHAR(  6 )		AS	CPT_Code_4
+		,	clms.CPT_Date_4						::	DATE				AS	CPT_Date_4
+		,	clms.CPT_Code_5						::	VARCHAR(  6 )		AS	CPT_Code_5
+		,	clms.CPT_Date_5						::	DATE				AS	CPT_Date_5
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_Admitting
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_Admitting	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_Admitting
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_Primary
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_Primary	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_Primary
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_2
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_2	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_2
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_3
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_3	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_3
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_4
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_4	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_4
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_5
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+								0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_5	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_5
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_6
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_6	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_6
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_7
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_7	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_7
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_8
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_8	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_8
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_9
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_9	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_9
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_10
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_10	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_10
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_11
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_11	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_11
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_12
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_12	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_12
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_13
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_13	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_13
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_14
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_14	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_14
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_15
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_15	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_15
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_16
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_16	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_16
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_17
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_17	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_17
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_18
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_18	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_18
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_19
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_19	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_19
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_20
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_20	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_20
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_21
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_21	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_21
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_22
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_22	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_22
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_23
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_23	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_23
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_24
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_24	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_24
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_25
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+								0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_25	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_25
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_26
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_26	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_26
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_27
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_27	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_27
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_28
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_28	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_28
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_29
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_29	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_29
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_30
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_30	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_30
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_31
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_31	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_31
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_32
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_32	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_32
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_33
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_33	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_33
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_34
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+								0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_34	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_34
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_35
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+								0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_35	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_35
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_36
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_36	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_36
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_37
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_37	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_37
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_38
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_38	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_38
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_39
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_39	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_39
+		,	CASE	ICD_Code_Type
+				WHEN	2	THEN	clms.ICD_DX_Code_40
+				WHEN	1	THEN
+					(	SELECT	SUBSTRING( LISTAGG( DISTINCT icd10cm, '***' ) WITHIN GROUP ( ORDER BY icd10cm ),
+									0, CHARINDEX( '***', LISTAGG( DISTINCT icd10cm, '***' ) ) )
+						FROM	whaight.HFNY_ICD9_to_ICD10_xwalk
+						WHERE	icd9cm	=	clms.ICD_DX_Code_40	)
+			END									::	VARCHAR(  8 )		AS	ICD_DX_Code_40
+		,	clms.DRG_Code						::	VARCHAR(  5 )		AS	DRG_Code
+		,	clms.DRG_Version					::	VARCHAR(  1 )		AS	DRG_Version
+		,	clms.accident_Date					::	DATE				AS	accident_Date
+		,	clms.ER_Flag						::	VARCHAR(  1 )		AS	ER_Flag
+		,	clms.MVA_Flag						::	VARCHAR(  1 )		AS	MVA_Flag
+		,	clms.work_Comp_Flag					::	VARCHAR(  1 )		AS	work_Comp_Flag
+		,	clms.accident_Flag					::	VARCHAR(  1 )		AS	accident_Flag
+		,	clms.accident_State					::	VARCHAR(  2 )		AS	accident_State
+		,	clms.accident_Hour					::	VARCHAR(  2 )		AS	accident_Hour
+		,	clms.in_Network_Flag				::	VARCHAR(  1 )		AS	in_Network_Flag
+		,	clms.referring_Provider_ID			::	VARCHAR(  1 )		AS	referring_Provider_ID
+		,	clms.billing_Provider_ID			::	VARCHAR( 15 )		AS	billing_Provider_ID
+		,	clms.prov_Patient_Acct_Num			::	VARCHAR( 20 )		AS	prov_Patient_Acct_Num
+		,	clms.med_Record_Num					::	VARCHAR( 30 )		AS	med_Record_Num
+		,	clms.occ_Code_1						::	VARCHAR(  2 )		AS	occ_Code_1
+		,	clms.occ_Code_1_Date				::	DATE				AS	occ_Code_1_Date
+		,	clms.occ_Code_2						::	VARCHAR(  2 )		AS	occ_Code_2
+		,	clms.occ_Code_2_Date				::	DATE				AS	occ_Code_2_Date
+		,	clms.occ_Code_3						::	VARCHAR(  2 )		AS	occ_Code_3
+		,	clms.occ_Code_3_Date				::	DATE				AS	occ_Code_3_Date
+		,	clms.occ_Code_4						::	VARCHAR(  2 )		AS	occ_Code_4
+		,	clms.occ_Code_4_Date				::	DATE				AS	occ_Code_4_Date
+		,	clms.occ_Span_Code_1				::	VARCHAR(  2 )		AS	occ_Span_Code_1
+		,	clms.occ_Span_Code_1_From_Date		::	DATE				AS	occ_Span_Code_1_From_Date
+		,	clms.occ_Span_Code_1_To_Date		::	DATE				AS	occ_Span_Code_1_To_Date
+		,	clms.occ_Span_Code_2				::	VARCHAR(  2 )		AS	occ_Span_Code_2
+		,	clms.occ_Span_Code_2_From_Date		::	DATE				AS	occ_Span_Code_2_From_Date
+		,	clms.occ_Span_Code_2_To_Date		::	DATE				AS	occ_Span_Code_2_To_Date
+		,	clms.cond_Code_1					::	VARCHAR(  2 )		AS	cond_Code_1
+		,	clms.cond_Code_2					::	VARCHAR(  2 )		AS	cond_Code_2
+		,	clms.cond_Code_3					::	VARCHAR(  2 )		AS	cond_Code_3
+		,	clms.cond_Code_4					::	VARCHAR(  2 )		AS	cond_Code_4
+		,	clms.cond_Code_5					::	VARCHAR(  2 )		AS	cond_Code_5
+		,	clms.cond_Code_6					::	VARCHAR(  2 )		AS	cond_Code_6
+		,	clms.cond_Code_7					::	VARCHAR(  2 )		AS	cond_Code_7
+		,	clms.cond_Code_8					::	VARCHAR(  2 )		AS	cond_Code_8
+		,	clms.cond_Code_9					::	VARCHAR(  2 )		AS	cond_Code_9
+		,	clms.cond_Code_10					::	VARCHAR(  2 )		AS	cond_Code_10
+		,	clms.cond_Code_11					::	VARCHAR(  2 )		AS	cond_Code_11
+		,	clms.cond_Code_12					::	VARCHAR(  2 )		AS	cond_Code_12
+		,	clms.value_Code_1					::	VARCHAR(  2 )		AS	value_Code_1
+		,	clms.value_Code_1_Amt				::	NUMERIC( 10, 2 )	AS	value_Code_1_Amt
+		,	clms.value_Code_2					::	VARCHAR(  2 )		AS	value_Code_2
+		,	clms.value_Code_2_Amt				::	NUMERIC( 10, 2 )	AS	value_Code_2_Amt
+		,	clms.value_Code_3					::	VARCHAR(  2 )		AS	value_Code_3
+		,	clms.value_Code_3_Amt				::	NUMERIC( 11, 2 )	AS	value_Code_3_Amt
+		,	clms.value_Code_4					::	VARCHAR(  2 )		AS	value_Code_4
+		,	clms.value_Code_4_Amt				::	NUMERIC( 10, 2 )	AS	value_Code_4_Amt
+		,	clms.value_Code_5					::	VARCHAR(  2 )		AS	value_Code_5
+		,	clms.value_Code_5_Amt				::	NUMERIC( 10, 2 )	AS	value_Code_5_Amt
+		,	clms.value_Code_6					::	VARCHAR(  2 )		AS	value_Code_6
+		,	clms.value_Code_6_Amt				::	NUMERIC( 10, 2 )	AS	value_Code_6_Amt
+		,	clms.value_Code_7					::	VARCHAR(  2 )		AS	value_Code_7
+		,	clms.value_Code_7_Amt				::	NUMERIC( 10, 2 )	AS	value_Code_7_Amt
+		,	clms.value_Code_8					::	VARCHAR(  2 )		AS	value_Code_8
+		,	clms.value_Code_8_Amt				::	NUMERIC( 10, 2 )	AS	value_Code_8_Amt
+		,	clms.value_Code_9					::	VARCHAR(  2 )		AS	value_Code_9
+		,	clms.value_Code_9_Amt				::	NUMERIC( 10, 2 )	AS	value_Code_9_Amt
+		,	clms.value_Code_10					::	VARCHAR(  2 )		AS	value_Code_10
+		,	clms.value_Code_10_Amt				::	NUMERIC( 10, 2 )	AS	value_Code_10_Amt
+		,	clms.value_Code_11					::	VARCHAR(  2 )		AS	value_Code_11
+		,	clms.value_Code_11_Amt				::	NUMERIC( 10, 2 )	AS	value_Code_11_Amt
+		,	clms.value_Code_12					::	VARCHAR(  2 )		AS	value_Code_12
+		,	clms.value_Code_12_Amt				::	NUMERIC( 10, 2 )	AS	value_Code_12_Amt
+		,	clms.payee_Code						::	VARCHAR(  1 )		AS	payee_Code
+		,	clms.line_Num						::	VARCHAR(  3 )		AS	line_Num
+		,	clms.DX_Code_pointer_1				::	VARCHAR(  1 )		AS	DX_Code_pointer_1
+		,	clms.DX_Code_pointer_2				::	VARCHAR(  1 )		AS	DX_Code_pointer_2
+		,	clms.DX_Code_pointer_3				::	VARCHAR(  1 )		AS	DX_Code_pointer_3
+		,	clms.DX_Code_pointer_4				::	VARCHAR(  1 )		AS	DX_Code_pointer_4
+		,	clms.procedure_Code					::	VARCHAR(  6 )		AS	procedure_Code
+		,	clms.procedure_Code_modifier_1		::	VARCHAR(  2 )		AS	procedure_Code_modifier_1
+		,	clms.procedure_Code_modifier_2		::	VARCHAR(  2 )		AS	procedure_Code_modifier_2
+		,	clms.procedure_Code_modifier_3		::	VARCHAR(  2 )		AS	procedure_Code_modifier_3
+		,	clms.procedure_Code_modifier_4		::	VARCHAR(  2 )		AS	procedure_Code_modifier_4
+		,	clms.revenue_Code					::	VARCHAR(  1 )		AS	revenue_Code
+		,	clms.accommodation_Revenue_Code		::	VARCHAR(  1 )		AS	accommodation_Revenue_Code
+		,	clms.accommodation_Rate				::	VARCHAR(  1 )		AS	accommodation_Rate
+		,	clms.ancillary_Revenue_Code			::	VARCHAR(  1 )		AS	ancillary_Revenue_Code
+		,	clms.emergency_Indicator			::	VARCHAR(  1 )		AS	emergency_Indicator
+		,	clms.NDC_Code						::	VARCHAR(  1 )		AS	NDC_Code
+		,	clms.date_Written					::	DATE				AS	date_Written
+		,	clms.first_DOS						::	DATE				AS	first_DOS
+		,	clms.last_DOS						::	DATE				AS	last_DOS
+		,	clms.units							::	VARCHAR(  9 )		AS	units
+		,	clms.anaesthesia					::	VARCHAR(  1 )		AS	anaesthesia
+		,	clms.charge_Amt						::	NUMERIC( 11, 2 )	AS	charge_Amt
+		,	clms.allowed_Amt					::	NUMERIC( 11, 2 )	AS	allowed_Amt
+		,	clms.not_Allowed_Amt				::	NUMERIC( 11, 2 )	AS	not_Allowed_Amt
+		,	clms.deductible_Amt					::	NUMERIC( 10, 2 )	AS	deductible_Amt
+		,	clms.copay_Amt						::	NUMERIC( 10, 2 )	AS	copay_Amt
+		,	clms.coinsurance_Amt				::	NUMERIC( 10, 2 )	AS	coinsurance_Amt
+		,	clms.would_Pay_Amt					::	NUMERIC( 10, 2 )	AS	would_Pay_Amt
+		,	clms.benefit_Amt					::	NUMERIC( 11, 2 )	AS	benefit_Amt
+		,	clms.prov_Discount_Amt				::	NUMERIC( 10, 2 )	AS	prov_Discount_Amt
+		,	clms.place_Of_Service				::	VARCHAR(  2 )		AS	place_Of_Service
+		,	clms.type_Of_Service				::	VARCHAR(  2 )		AS	type_Of_Service
+		,	clms.perf_Provider_ID				::	VARCHAR( 15 )		AS	perf_Provider_ID
+		,	clms.COB_Indicator					::	VARCHAR(  1 )		AS	COB_Indicator
+		,	clms.COB_Amt						::	NUMERIC( 10, 2 )	AS	COB_Amt
+		,	clms.COB_Payer						::	VARCHAR(  3 )		AS	COB_Payer
+		,	clms.COB_Date						::	DATE				AS	COB_Date
+		,	clms.capitated_Indicator			::	VARCHAR(  1 )		AS	capitated_Indicator
+		,	clms.remarks						::	VARCHAR(  1 )		AS	remarks
+		,	clms.claim_Client_Spec_Field_1		::	VARCHAR(  1 )		AS	claim_Client_Spec_Field_1
+		,	clms.claim_Client_Spec_Field_2		::	VARCHAR(  1 )		AS	claim_Client_Spec_Field_2
+		,	clms.claim_Client_Spec_Field_3		::	VARCHAR(  1 )		AS	claim_Client_Spec_Field_3
+		,	clms.claim_Client_Spec_Field_4		::	VARCHAR(  1 )		AS	claim_Client_Spec_Field_4
+		,	clms.claim_Client_Spec_Field_5		::	VARCHAR(  1 )		AS	claim_Client_Spec_Field_5
+		,	clms.claim_Client_Spec_Field_6		::	VARCHAR(  1 )		AS	claim_Client_Spec_Field_6
+		,	clms.claim_Client_Spec_Field_7		::	VARCHAR(  1 )		AS	claim_Client_Spec_Field_7
+		,	clms.claim_Client_Spec_Field_8		::	VARCHAR(  1 )		AS	claim_Client_Spec_Field_8
+		,	clms.claim_Client_Spec_Field_9		::	VARCHAR(  1 )		AS	claim_Client_Spec_Field_9
+		,	clms.claim_Client_Spec_Field_10		::	VARCHAR(  1 )		AS	claim_Client_Spec_Field_10
+		,	clms.DHP_Ch_LDOS					::	DATE				AS	DHP_Ch_LDOS
+		,	clms.DHP_Med_Claim_Load_Month		::	INTEGER				AS	DHP_Med_Claim_Load_Month
+		,	clms.DHP_ci_ID						::	VARCHAR( 15 )		AS	DHP_ci_ID
+		,	clms.DHP_s_ID						::	VARCHAR( 15 )		AS	DHP_s_ID
+		,	clms.DHP_a_ID						::	VARCHAR( 12 )		AS	DHP_a_ID
+		,	clms.DHP_Paid_Amt					::	NUMERIC( 11, 2 )	AS	DHP_Paid_Amt
+		,	clms.DHP_Performing_Provider_ID		::	VARCHAR( 17 )		AS	DHP_Performing_Provider_ID
+		,	clms.DHP_Billing_Provider_ID		::	VARCHAR( 17 )		AS	DHP_Billing_Provider_ID
+		,	clms.DHP_CH_Claim_Status_CD			::	VARCHAR(  1 )		AS	DHP_CH_Claim_Status_CD
+		,	clms.DHP_Client_Capitated_Indicator	::	INTEGER				AS	DHP_Client_Capitated_Indicator
+		,	clms.DHP_CH_ER_Indicator			::	INTEGER				AS	DHP_CH_ER_Indicator
+		,	clms.DHP_CH_MVA_Indicator			::	INTEGER				AS	DHP_CH_MVA_Indicator
+		,	clms.DHP_CH_Acc_Indicator			::	INTEGER				AS	DHP_CH_Acc_Indicator
+		,	clms.DHP_CH_Amb_Indicator			::	INTEGER				AS	DHP_CH_Amb_Indicator
+		,	clms.DHP_CH_WC_Indicator			::	INTEGER				AS	DHP_CH_WC_Indicator
+		,	clms.DHP_CH_COB_Indicator			::	INTEGER				AS	DHP_CH_COB_Indicator
+		,	clms.DHP_Check_Num					::	INTEGER				AS	DHP_Check_Num
+		,	clms.CH_Acct_1_Segment				::	VARCHAR(  7 )		AS	CH_Acct_1_Segment
+		,	clms.CH_Acct_2_Segment				::	VARCHAR( 30 )		AS	CH_Acct_2_Segment
+		,	clms.CH_Acct_3_Segment				::	VARCHAR(  7 )		AS	CH_Acct_3_Segment
+		,	clms.CH_Acct_4_Segment				::	VARCHAR(  7 )		AS	CH_Acct_4_Segment
+		,	clms.CH_Acct_5_Segment				::	VARCHAR(  7 )		AS	CH_Acct_5_Segment
+		,	clms.CH_Acct_Name					::	VARCHAR( 29 )		AS	CH_Acct_Name
+		,	clms.A_Funding_CD					::	VARCHAR( 13 )		AS	A_Funding_CD
+		,	clms.cycle_SK						::	INTEGER				AS	cycle_SK
+		,	clms.EIC_SK							::	INTEGER				AS	EIC_SK
+		,	clms.CL_SK							::	INTEGER				AS	CL_SK
+		,	clms.cycle_Created_Date				::	DATE				AS	cycle_Created_Date
+		,	clms.filename						::	VARCHAR( 39 )		AS	filename
+		,	clms.DHP_CH_Claim_Num				::	VARCHAR( 27 )		AS	DHP_CH_Claim_Num
+		,	clms.DHP_CH_Claim_Line_Num			::	VARCHAR(  3 )		AS	DHP_CH_Claim_Line_Num
+		,	clms.DHP_Claim_Form_Type			::	INTEGER				AS	DHP_Claim_Form_Type
+		,	clms.DHP_Charge_Amt					::	NUMERIC( 11, 2 )	AS	DHP_Charge_Amt
+		,	clms.CH_Payment_Status_CD_SK		::	INTEGER				AS	CH_Payment_Status_CD_SK
+		,	clms.CH_Received_Date				::	DATE				AS	CH_Received_Date
+		,	clms.EIC_Extract_Date				::	DATE				AS	EIC_Extract_Date
+		,	clms.DHP_Client_Status_CD			::	VARCHAR(  1 )		AS	DHP_Client_Status_CD
+		,	clms.DHP_Claim_Status				::	VARCHAR(  1 )		AS	DHP_Claim_Status
+		,	clms.DHP_Proc_Code					::	VARCHAR(  6 )		AS	DHP_Proc_Code
+	FROM
+		whaight.HFNY_claims_clean	clms
+	WHERE	
+			principal_Proc_Code	IN	(	'99281',	'99282',	'99283',	'99284',	'99285',
+										'G0380',	'G0381',	'G0382',	'G0383',	'G0384',
+										'99220',	'99217',	'99236',	'99291',	'99292'		)
+		OR	ICD_Proc_Code_2		IN	(	'99281',	'99282',	'99283',	'99284',	'99285',
+										'G0380',	'G0381',	'G0382',	'G0383',	'G0384',
+										'99220',	'99217',	'99236',	'99291',	'99292'		)
+		OR	ICD_Proc_Code_3		IN	(	'99281',	'99282',	'99283',	'99284',	'99285',
+										'G0380',	'G0381',	'G0382',	'G0383',	'G0384',
+										'99220',	'99217',	'99236',	'99291',	'99292'		)
+		OR	ICD_Proc_Code_4		IN	(	'99281',	'99282',	'99283',	'99284',	'99285',
+										'G0380',	'G0381',	'G0382',	'G0383',	'G0384',
+										'99220',	'99217',	'99236',	'99291',	'99292'		)
+		OR	ICD_Proc_Code_5		IN	(	'99281',	'99282',	'99283',	'99284',	'99285',
+										'G0380',	'G0381',	'G0382',	'G0383',	'G0384',
+										'99220',	'99217',	'99236',	'99291',	'99292'		)
+		OR	ICD_Proc_Code_6		IN	(	'99281',	'99282',	'99283',	'99284',	'99285',
+										'G0380',	'G0381',	'G0382',	'G0383',	'G0384',
+										'99220',	'99217',	'99236',	'99291',	'99292'		)
+		OR	BTRIM( place_Of_Service )					=	'23'
+--		OR	BTRIM( admission_Type_Code )				=	'1'
+--		OR	BTRIM( admission_Source_Code )				=	'7'
+		OR	SUBSTRING( BTRIM( revenue_Code ), 1, 3 )	=	'045'
+		OR	BTRIM( revenue_Code )						=	'0981'
+);
+ANALYZE COMPRESSION		whaight.HFNY_claims_clean_ICD10;
+ANALYZE					whaight.HFNY_claims_clean_ICD10;
+VACUUM SORT ONLY		whaight.HFNY_claims_clean_ICD10;
+ANALYZE					whaight.HFNY_claims_clean_ICD10;
+
+
+
+DROP TABLE IF EXISTS	whaight.HFNY_ED_claims_clean_ICD10_flat;
+CREATE TABLE			whaight.HFNY_ED_claims_clean_ICD10_flat
+(		claim_ID						VARCHAR( 13 )		ENCODE	ZSTD
+	,	adj_Claim						VARCHAR( 13 )		ENCODE	ZSTD
+	,	claim_Status					VARCHAR(  1 )		ENCODE	ZSTD
+	,	claim_Type						VARCHAR(  1 )		ENCODE	ZSTD
+	,	check_Num						VARCHAR( 11 )		ENCODE	ZSTD
+	,	check_Date						DATE				ENCODE	ZSTD
+	,	processed_Date					DATE				ENCODE	ZSTD
+	,	received_Date					DATE				ENCODE	ZSTD
+	,	member_ID						VARCHAR( 15 )		ENCODE	ZSTD
+	,	ci_ID							VARCHAR( 15 )		ENCODE	ZSTD
+	,	admit_Date						DATE				ENCODE	ZSTD
+	,	admit_Hour						VARCHAR(  1 )		ENCODE	LZO
+	,	admit_Source					VARCHAR(  1 )		ENCODE	ZSTD
+	,	admit_Type						VARCHAR(  2 )		ENCODE	ZSTD
+	,	discharge_Date					DATE				ENCODE	ZSTD
+	,	discharge_Hour 					VARCHAR(  1 )		ENCODE	LZO
+	,	discharge_Status				VARCHAR(  2 )		ENCODE	ZSTD
+	,	acct_Plan_Group_ID				VARCHAR( 12 )		ENCODE	BYTEDICT
+	,	bill_Type						VARCHAR(  3 )		ENCODE	ZSTD
+	,	invoice_Num						VARCHAR(  1 )		ENCODE	LZO
+	,	claim_Submitted_charge_Amt		NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	claim_Disallowed_Amt			NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	disallowed_Reason_1				VARCHAR(  1 )		ENCODE	LZO
+	,	disallowed_Reason_2				VARCHAR(  1 )		ENCODE	LZO
+	,	disallowed_Reason_3				VARCHAR(  1 )		ENCODE	LZO
+	,	claim_Allowed_Amt				NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	claim_Paid_Amt					NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	ICD_Code_Type					VARCHAR(  1 )		ENCODE	ZSTD
+	,	principal_Proc_Code				VARCHAR(  7 )		ENCODE	ZSTD
+	,	principal_Proc_Date				DATE				ENCODE	ZSTD
+	,	ICD_Proc_Code_2					VARCHAR(  7 )		ENCODE	ZSTD
+	,	ICD_Proc_Date_2					DATE				ENCODE	ZSTD
+	,	ICD_Proc_Code_3					VARCHAR(  7 )		ENCODE	ZSTD
+	,	ICD_Proc_Date_3					DATE				ENCODE	ZSTD
+	,	ICD_Proc_Code_4					VARCHAR(  7 )		ENCODE	ZSTD
+	,	ICD_Proc_Date_4					DATE				ENCODE	ZSTD
+	,	ICD_Proc_Code_5					VARCHAR(  7 )		ENCODE	ZSTD
+	,	ICD_Proc_Date_5					DATE				ENCODE	ZSTD
+	,	ICD_Proc_Code_6					VARCHAR(  7 )		ENCODE	ZSTD
+	,	ICD_Proc_Date_6					DATE				ENCODE	ZSTD
+	,	CPT_Code_1						VARCHAR(  6 )		ENCODE	BYTEDICT
+	,	CPT_Date_1						DATE				ENCODE	ZSTD
+	,	CPT_Code_2						VARCHAR(  6 )		ENCODE	LZO
+	,	CPT_Date_2						DATE				ENCODE	ZSTD
+	,	CPT_Code_3						VARCHAR(  6 )		ENCODE	LZO
+	,	CPT_Date_3						DATE				ENCODE	ZSTD
+	,	CPT_Code_4						VARCHAR(  6 )		ENCODE	LZO
+	,	CPT_Date_4						DATE				ENCODE	ZSTD
+	,	CPT_Code_5						VARCHAR(  6 )		ENCODE	LZO
+	,	CPT_Date_5						DATE				ENCODE	ZSTD
+	,	ICD_DX_Code_Admitting			VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_Primary				VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_2					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_3					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_4					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_5					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_6					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_7					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_8					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_9					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_10					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_11 					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_12					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_13					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_14					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_15					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_16					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_17					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_18					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_19					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_20					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_21					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_22					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_23					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_24					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_25					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_26					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_27					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_28					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_29					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_30					VARCHAR(  8 )		ENCODE	ZSTD
+	,	ICD_DX_Code_31					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_32					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_33					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_34					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_35					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_36					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_37					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_38					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_39					VARCHAR(  8 )		ENCODE	LZO
+	,	ICD_DX_Code_40					VARCHAR(  8 )		ENCODE	LZO
+	,	DRG_Code						VARCHAR(  5 )		ENCODE	ZSTD
+	,	DRG_Version						VARCHAR(  1 )		ENCODE	LZO
+	,	accident_Date					DATE				ENCODE	ZSTD
+	,	ER_Flag							VARCHAR(  1 )		ENCODE	ZSTD
+	,	MVA_Flag						VARCHAR(  1 )		ENCODE	LZO
+	,	work_Comp_Flag					VARCHAR(  1 )		ENCODE	LZO
+	,	accident_Flag					VARCHAR(  1 )		ENCODE	LZO
+	,	accident_State					VARCHAR(  2 )		ENCODE	LZO
+	,	accident_Hour					VARCHAR(  2 )		ENCODE	LZO
+	,	in_Network_Flag					VARCHAR(  1 )		ENCODE	ZSTD
+	,	referring_Provider_ID			VARCHAR(  1 )		ENCODE	LZO
+	,	billing_Provider_ID				VARCHAR( 15 )		ENCODE	BYTEDICT
+	,	prov_Patient_Acct_Num			VARCHAR( 20 )		ENCODE	ZSTD
+	,	med_Record_Num					VARCHAR( 30 )		ENCODE	ZSTD
+	,	occ_Code_1						VARCHAR(  2 )		ENCODE	ZSTD
+	,	occ_Code_1_Date					DATE				ENCODE	ZSTD
+	,	occ_Code_2						VARCHAR(  2 )		ENCODE	ZSTD
+	,	occ_Code_2_Date					DATE				ENCODE	ZSTD
+	,	occ_Code_3						VARCHAR(  2 )		ENCODE	ZSTD
+	,	occ_Code_3_Date					DATE				ENCODE	ZSTD
+	,	occ_Code_4						VARCHAR(  2 )		ENCODE	ZSTD
+	,	occ_Code_4_Date					DATE				ENCODE	ZSTD
+	,	occ_Span_Code_1					VARCHAR(  2 )		ENCODE	ZSTD
+	,	occ_Span_Code_1_From_Date		DATE				ENCODE	ZSTD
+	,	occ_Span_Code_1_To_Date			DATE				ENCODE	ZSTD
+	,	occ_Span_Code_2					VARCHAR(  2 )		ENCODE	ZSTD
+	,	occ_Span_Code_2_From_Date		DATE				ENCODE	ZSTD
+	,	occ_Span_Code_2_To_Date			DATE				ENCODE	ZSTD
+	,	cond_Code_1						VARCHAR(  2 )		ENCODE	ZSTD
+	,	cond_Code_2						VARCHAR(  2 )		ENCODE	ZSTD
+	,	cond_Code_3						VARCHAR(  2 )		ENCODE	ZSTD
+	,	cond_Code_4						VARCHAR(  2 )		ENCODE	ZSTD
+	,	cond_Code_5						VARCHAR(  2 )		ENCODE	ZSTD
+	,	cond_Code_6						VARCHAR(  2 )		ENCODE	LZO
+	,	cond_Code_7						VARCHAR(  2 )		ENCODE	LZO
+	,	cond_Code_8						VARCHAR(  2 )		ENCODE	LZO
+	,	cond_Code_9						VARCHAR(  2 )		ENCODE	LZO
+	,	cond_Code_10					VARCHAR(  2 )		ENCODE	LZO
+	,	cond_Code_11					VARCHAR(  2 )		ENCODE	LZO
+	,	cond_Code_12					VARCHAR(  2 )		ENCODE	LZO
+	,	value_Code_1					VARCHAR(  2 )		ENCODE	ZSTD
+	,	value_Code_1_Amt				NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	value_Code_2					VARCHAR(  2 )		ENCODE	ZSTD
+	,	value_Code_2_Amt				NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	value_Code_3					VARCHAR(  2 )		ENCODE	ZSTD
+	,	value_Code_3_Amt				NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	value_Code_4					VARCHAR(  2 )		ENCODE	ZSTD
+	,	value_Code_4_Amt				NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	value_Code_5					VARCHAR(  2 )		ENCODE	ZSTD
+	,	value_Code_5_Amt				NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	value_Code_6					VARCHAR(  2 )		ENCODE	ZSTD
+	,	value_Code_6_Amt				NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	value_Code_7					VARCHAR(  2 )		ENCODE	ZSTD
+	,	value_Code_7_Amt				NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	value_Code_8					VARCHAR(  2 )		ENCODE	ZSTD
+	,	value_Code_8_Amt				NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	value_Code_9					VARCHAR(  2 )		ENCODE	ZSTD
+	,	value_Code_9_Amt				NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	value_Code_10					VARCHAR(  2 )		ENCODE	LZO
+	,	value_Code_10_Amt				NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	value_Code_11					VARCHAR(  2 )		ENCODE	LZO
+	,	value_Code_11_Amt				NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	value_Code_12					VARCHAR(  2 )		ENCODE	LZO
+	,	value_Code_12_Amt				NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	payee_Code						VARCHAR(  1 )		ENCODE	ZSTD
+	,	line_Num						VARCHAR(  3 )		ENCODE	ZSTD
+	,	DX_Code_pointer_1				VARCHAR(  2 )		ENCODE	LZO
+	,	DX_Code_pointer_2				VARCHAR(  2 )		ENCODE	LZO
+	,	DX_Code_pointer_3				VARCHAR(  2 )		ENCODE	LZO
+	,	DX_Code_pointer_4				VARCHAR(  2 )		ENCODE	LZO
+	,	procedure_Code					VARCHAR(  6 )		ENCODE	BYTEDICT
+	,	procedure_Code_modifier_1		VARCHAR(  2 )		ENCODE	ZSTD
+	,	procedure_Code_modifier_2		VARCHAR(  2 )		ENCODE	ZSTD
+	,	procedure_Code_modifier_3		VARCHAR(  2 )		ENCODE	ZSTD
+	,	procedure_Code_modifier_4		VARCHAR(  2 )		ENCODE	LZO
+	,	revenue_Code					VARCHAR(  1 )		ENCODE	LZO
+	,	accommodation_Revenue_Code		VARCHAR(  1 )		ENCODE	LZO
+	,	accommodation_Rate				VARCHAR(  1 )		ENCODE	LZO
+	,	ancillary_Revenue_Code			VARCHAR(  1 )		ENCODE	LZO
+	,	emergency_Indicator				VARCHAR(  1 )		ENCODE	ZSTD
+	,	NDC_Code						VARCHAR(  1 )		ENCODE	LZO
+	,	date_Written					DATE				ENCODE	ZSTD
+	,	first_DOS						DATE				ENCODE	ZSTD
+	,	last_DOS						DATE				ENCODE	ZSTD
+	,	units							VARCHAR(  9 )		ENCODE	ZSTD
+	,	anaesthesia						VARCHAR(  1 )		ENCODE	LZO
+	,	charge_Amt						NUMERIC( 11, 2 )	ENCODE	ZSTD
+	,	allowed_Amt						NUMERIC( 11, 2 )	ENCODE	ZSTD
+	,	not_Allowed_Amt					NUMERIC( 11, 2 )	ENCODE	ZSTD
+	,	deductible_Amt					NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	copay_Amt						NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	coinsurance_Amt					NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	would_Pay_Amt					NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	benefit_Amt						NUMERIC( 11, 2 )	ENCODE	ZSTD
+	,	prov_Discount_Amt				NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	place_Of_Service				VARCHAR(  2 )		ENCODE	ZSTD
+	,	type_Of_Service					VARCHAR(  2 )		ENCODE	ZSTD
+	,	perf_Provider_ID				VARCHAR( 15 )		ENCODE	ZSTD
+	,	COB_Indicator					VARCHAR(  1 )		ENCODE	LZO
+	,	COB_Amt							NUMERIC( 10, 2 )	ENCODE	ZSTD
+	,	COB_Payer						VARCHAR(  3 )		ENCODE	ZSTD
+	,	COB_Date						DATE				ENCODE	ZSTD
+	,	capitated_Indicator				VARCHAR(  1 )		ENCODE	ZSTD
+	,	remarks							VARCHAR(  1 )		ENCODE	LZO
+	,	claim_Client_Spec_Field_1		VARCHAR(  1 )		ENCODE	LZO
+	,	claim_Client_Spec_Field_2		VARCHAR(  1 )		ENCODE	LZO
+	,	claim_Client_Spec_Field_3		VARCHAR(  1 )		ENCODE	LZO
+	,	claim_Client_Spec_Field_4		VARCHAR(  1 )		ENCODE	LZO
+	,	claim_Client_Spec_Field_5		VARCHAR(  1 )		ENCODE	LZO
+	,	claim_Client_Spec_Field_6		VARCHAR(  1 )		ENCODE	LZO
+	,	claim_Client_Spec_Field_7		VARCHAR(  1 )		ENCODE	LZO
+	,	claim_Client_Spec_Field_8		VARCHAR(  1 )		ENCODE	LZO
+	,	claim_Client_Spec_Field_9		VARCHAR(  1 )		ENCODE	LZO
+	,	claim_Client_Spec_Field_10		VARCHAR(  1 )		ENCODE	LZO
+	,	DHP_Ch_LDOS						DATE				ENCODE	ZSTD
+	,	DHP_Med_Claim_Load_Month		INTEGER				ENCODE	LZO
+	,	DHP_ci_ID						VARCHAR( 15 )		ENCODE	ZSTD
+	,	DHP_s_ID						VARCHAR( 15 )		ENCODE	ZSTD
+	,	DHP_a_ID						VARCHAR( 12 )		ENCODE	BYTEDICT
+	,	DHP_Paid_Amt					NUMERIC( 11, 2 )	ENCODE	ZSTD
+	,	DHP_Performing_Provider_ID		VARCHAR( 17 )		ENCODE	ZSTD
+	,	DHP_Billing_Provider_ID			VARCHAR( 17 )		ENCODE	BYTEDICT
+	,	DHP_CH_Claim_Status_CD			VARCHAR(  1 )		ENCODE	ZSTD
+	,	DHP_Client_Capitated_Indicator	INTEGER				ENCODE	ZSTD
+	,	DHP_CH_ER_Indicator				INTEGER				ENCODE	ZSTD
+	,	DHP_CH_MVA_Indicator			INTEGER				ENCODE	ZSTD
+	,	DHP_CH_Acc_Indicator			INTEGER				ENCODE	ZSTD
+	,	DHP_CH_Amb_Indicator			INTEGER				ENCODE	ZSTD
+	,	DHP_CH_WC_Indicator				INTEGER				ENCODE	ZSTD
+	,	DHP_CH_COB_Indicator			INTEGER				ENCODE	ZSTD
+	,	DHP_Check_Num					INTEGER				ENCODE	ZSTD
+	,	CH_Acct_1_Segment				VARCHAR(  7 )		ENCODE	ZSTD
+	,	CH_Acct_2_Segment				VARCHAR( 30 )		ENCODE	BYTEDICT
+	,	CH_Acct_3_Segment				VARCHAR(  7 )		ENCODE	BYTEDICT
+	,	CH_Acct_4_Segment				VARCHAR(  7 )		ENCODE	BYTEDICT
+	,	CH_Acct_5_Segment				VARCHAR(  7 )		ENCODE	ZSTD
+	,	CH_Acct_Name					VARCHAR( 29 )		ENCODE	BYTEDICT
+	,	A_Funding_CD					VARCHAR( 13 )		ENCODE	ZSTD
+	,	cycle_SK						INTEGER				ENCODE	ZSTD
+	,	EIC_SK							INTEGER				ENCODE	ZSTD
+	,	CL_SK							INTEGER				ENCODE	ZSTD
+	,	cycle_Created_Date				DATE				ENCODE	ZSTD
+	,	filename						VARCHAR( 39 )		ENCODE	ZSTD
+	,	DHP_CH_Claim_Num				VARCHAR( 27 )		ENCODE	ZSTD
+	,	DHP_CH_Claim_Line_Num			VARCHAR(  3 )		ENCODE	ZSTD
+	,	DHP_Claim_Form_Type				INTEGER				ENCODE	ZSTD
+	,	DHP_Charge_Amt					NUMERIC( 11, 2 )	ENCODE	ZSTD
+	,	CH_Payment_Status_CD_SK			INTEGER				ENCODE	ZSTD
+	,	CH_Received_Date				DATE				ENCODE	ZSTD
+	,	EIC_Extract_Date				DATE				ENCODE	ZSTD
+	,	DHP_Client_Status_CD			VARCHAR(  1 )		ENCODE	LZO
+	,	DHP_Claim_Status				VARCHAR(  1 )		ENCODE	ZSTD
+	,	DHP_Proc_Code					VARCHAR(  6 )		ENCODE	BYTEDICT
+)
+DISTSTYLE KEY
+DISTKEY( ci_ID )
+INTERLEAVED SORTKEY(
+		claim_ID
+	,	ICD_Code_Type
+	,	first_DOS
+	,	perf_Provider_ID
+	,	billing_Provider_ID
+);
+
+
+
+INSERT INTO	whaight.HFNY_ED_claims_clean_ICD10_flat
+(	SELECT	*
+	FROM	whaight.HFNY_claims_clean_ICD10
+	WHERE	
+			principal_Proc_Code	IN	(	'99281',	'99282',	'99283',	'99284',	'99285',
+										'G0380',	'G0381',	'G0382',	'G0383',	'G0384',
+										'99220',	'99217',	'99236',	'99291',	'99292'		)
+		OR	ICD_Proc_Code_2		IN	(	'99281',	'99282',	'99283',	'99284',	'99285',
+										'G0380',	'G0381',	'G0382',	'G0383',	'G0384',
+										'99220',	'99217',	'99236',	'99291',	'99292'		)
+		OR	ICD_Proc_Code_3		IN	(	'99281',	'99282',	'99283',	'99284',	'99285',
+										'G0380',	'G0381',	'G0382',	'G0383',	'G0384',
+										'99220',	'99217',	'99236',	'99291',	'99292'		)
+		OR	ICD_Proc_Code_4		IN	(	'99281',	'99282',	'99283',	'99284',	'99285',
+										'G0380',	'G0381',	'G0382',	'G0383',	'G0384',
+										'99220',	'99217',	'99236',	'99291',	'99292'		)
+		OR	ICD_Proc_Code_5		IN	(	'99281',	'99282',	'99283',	'99284',	'99285',
+										'G0380',	'G0381',	'G0382',	'G0383',	'G0384',
+										'99220',	'99217',	'99236',	'99291',	'99292'		)
+		OR	ICD_Proc_Code_6		IN	(	'99281',	'99282',	'99283',	'99284',	'99285',
+										'G0380',	'G0381',	'G0382',	'G0383',	'G0384',
+										'99220',	'99217',	'99236',	'99291',	'99292'		)
+		OR	BTRIM( place_Of_Service )					=	'23'
+--		OR	BTRIM( admission_Type_Code )				=	'1'
+--		OR	BTRIM( admission_Source_Code )				=	'7'
+		OR	SUBSTRING( BTRIM( revenue_Code ), 1, 3 )	=	'045'
+		OR	BTRIM( revenue_Code )						=	'0981'
+);
+ANALYZE COMPRESSION		whaight.HFNY_ED_claims_clean_ICD10_flat;
+ANALYZE					whaight.HFNY_ED_claims_clean_ICD10_flat;
+VACUUM SORT ONLY		whaight.HFNY_ED_claims_clean_ICD10_flat;
+ANALYZE					whaight.HFNY_ED_claims_clean_ICD10_flat;
+
+
+
+GRANT USAGE
+ON SCHEMA		whaight
+TO				aprivett;
+GRANT SELECT
+ON TABLE		whaight.HFNY_ED_claims_clean_ICD10_flat
+TO				aprivett;
+
+
+select	count(*)
+from	whaight.HFNY_ED_claims_clean_ICD10_flat;</SQL>
+    <Name>whaight.HFNY_ED_claims_clean_ICD10_flat</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <SQL>/*	claim level flags, WED evening, 2/6	*/
+SELECT
+		member_ID
+	,	first_DOS
+	,	SUM( wasted_units )				AS	count_of_wasted_units
+	,	SUM( administered_units )		AS	count_of_administered_units
+	,	count_of_wasted_units + count_of_administered_units
+										AS	TOTAL_UNITS
+	,	SUM( paid_for_wasted )			AS	paid_for_wasted_units
+	,	SUM( paid_for_administered )	AS	paid_for_administered_units
+	,	paid_for_wasted_units + paid_for_administered_units
+										AS	TOTAL_PAID
+	,	SUM( allowed_amount )			AS	total_allowed_amount
+	,	CASE	count_of_administered_units &gt; 95
+			WHEN	TRUE	THEN	'1'
+			ELSE					'0'
+		END								AS	abnormality_flag_A
+	,	CASE	count_of_administered_units IN ( 44, 88 )
+			WHEN	TRUE	THEN	'1'
+			ELSE					'0'
+		END								AS	abnormality_flag_B
+	,	CASE	count_of_administered_units = 0
+			WHEN	TRUE	THEN	'1'
+			ELSE					'0'
+		END								AS	abnormality_flag_C
+	,	CASE	count_of_administered_units IN ( 15, 30, 45, 60, 75, 90 )
+			WHEN	TRUE	THEN	'1'
+			ELSE					'0'
+		END								AS	abnormality_flag_E
+	,	MAX( abnormality_pre_flag_D )	AS	abnormality_flag_D
+	,	MIN( disposition_of_modifier )	AS	min_dom
+	,	MAX( disposition_of_modifier )	AS	max_dom
+FROM
+	(	SELECT
+				claims.ClaimNumber			AS	claim_ID
+			,	claims.MemberID				AS	member_ID
+			,	claims.LineNumber			AS	line_num
+			,	CASE	claims.ClaimStatus
+					WHEN	'D'	THEN	'unpaid'
+					WHEN	'F'	THEN	'paid'
+				END							AS	claim_payment_status
+			,	CASE	claims.CPTCode1
+					WHEN	'J9355'	THEN	'herceptin'
+					ELSE					NULL
+				END							AS	administered
+			,	claims.ProcedureCodeModifier1
+			,	CASE	claims.ProcedureCodeModifier1	IS	NULL
+					WHEN	TRUE	THEN	'tis_null'
+					ELSE					'taint_null'
+				END							AS	disposition_of_modifier
+			,	CASE	(		disposition_of_modifier			=	'taint_null'
+							AND	claims.ProcedureCodeModifier1	=	'JW'			)
+					WHEN	TRUE	THEN	claims.Units::FLOAT
+					WHEN	FALSE	THEN	0.0
+				END							AS	wasted_units
+			,	CASE	(		(		disposition_of_modifier			=	'tis_null'		)
+							OR	(		disposition_of_modifier			=	'taint_null'
+									AND	claims.ProcedureCodeModifier1	!=	'JW'			)	)
+					WHEN	TRUE	THEN	claims.Units::FLOAT
+					WHEN	FALSE	THEN	0.0
+				END							AS	administered_units
+			,	CASE	(		disposition_of_modifier			=	'taint_null'
+							AND	claims.ProcedureCodeModifier1	=	'JW'			)
+					WHEN	TRUE	THEN	claims.ClaimPaidAmount
+					WHEN	FALSE	THEN	0.0
+				END							AS	paid_for_wasted
+			,	CASE	(		(		disposition_of_modifier			=	'tis_null'		)
+							OR	(		disposition_of_modifier			=	'taint_null'
+									AND	claims.ProcedureCodeModifier1	!=	'JW'			)	)
+					WHEN	TRUE	THEN	claims.ClaimPaidAmount
+					WHEN	FALSE	THEN	0.0
+				END							AS	paid_for_administered
+			,	claims.Units				AS	units
+			,	claims.ClaimPaidAmount		AS	paid_amount
+			,	claims.ClaimAllowedAmount	AS	allowed_amount
+			,	claims.FirstDOS				AS	first_DOS
+			,	CASE		(		Units::float			&lt;	5.0		)
+						AND	(		ProcedureCodeModifier1	!=	'JW'
+								OR	ProcedureCodeModifier1	IS	NULL	)
+					WHEN	TRUE	THEN	'1'
+					WHEN	FALSE	THEN	'0'
+				END							AS	abnormality_pre_flag_D
+		FROM
+					ESRD_clean_raw.medical_claims							claims
+			JOIN	(	SELECT DISTINCT	member_ID
+						FROM			whaight.HFNY_herc_claims_clean	)	herc
+			ON		claims.MemberID	=	herc.member_ID
+		WHERE
+				claim_payment_status	=	'paid'
+			AND	administered			=	'herceptin'
+			AND	paid_amount				&gt;	0
+			AND	DATEDIFF( DAY, '2017-05-01', FirstDOS )	&gt;=	0
+		ORDER BY
+				member_ID	ASC
+			,	first_DOS	ASC
+	)
+GROUP BY
+		member_ID
+	,	first_DOS
+ORDER BY
+		member_ID	ASC
+	,	first_DOS	ASC
+;
+
+
+
+
+
+
+
+/*	Let's count up those claim level flags, WED evening, 2/6	*/
+SELECT
+		SUM( abnormality_flag_A )	AS	A
+	,	SUM( abnormality_flag_B )	AS	B
+	,	SUM( abnormality_flag_C )	AS	C
+	,	SUM( abnormality_flag_D )	AS	D
+	,	SUM( abnormality_flag_E )	AS	E
+FROM
+(	SELECT
+		member_ID
+	,	first_DOS
+	,	SUM( wasted_units )				AS	count_of_wasted_units
+	,	SUM( administered_units )		AS	count_of_administered_units
+	,	SUM( paid_for_wasted )			AS	paid_for_wasted_units
+	,	SUM( paid_for_administered )	AS	paid_for_administered_units
+	,	SUM( allowed_amount )			AS	total_allowed_amount
+	,	CASE	count_of_administered_units &gt; 95
+			WHEN	TRUE	THEN	'1'
+			ELSE					'0'
+		END								AS	abnormality_flag_A
+	,	CASE	count_of_administered_units IN ( 44, 88 )
+			WHEN	TRUE	THEN	'1'
+			ELSE					'0'
+		END								AS	abnormality_flag_B
+	,	CASE	count_of_administered_units = 0
+			WHEN	TRUE	THEN	'1'
+			ELSE					'0'
+		END								AS	abnormality_flag_C
+	,	CASE	count_of_administered_units IN ( 15, 30, 45, 60, 75, 90 )
+			WHEN	TRUE	THEN	'1'
+			ELSE					'0'
+		END								AS	abnormality_flag_E
+	,	MAX( abnormality_pre_flag_D )	AS	abnormality_flag_D
+	,	MIN( disposition_of_modifier )	AS	min_dom
+	,	MAX( disposition_of_modifier )	AS	max_dom
+FROM
+	(	SELECT
+				claims.ClaimNumber			AS	claim_ID
+			,	claims.MemberID				AS	member_ID
+			,	claims.LineNumber			AS	line_num
+			,	CASE	claims.ClaimStatus
+					WHEN	'D'	THEN	'unpaid'
+					WHEN	'F'	THEN	'paid'
+				END							AS	claim_payment_status
+			,	CASE	claims.CPTCode1
+					WHEN	'J9355'	THEN	'herceptin'
+					ELSE					NULL
+				END							AS	administered
+			,	claims.ProcedureCodeModifier1
+			,	CASE	claims.ProcedureCodeModifier1	IS	NULL
+					WHEN	TRUE	THEN	'tis_null'
+					ELSE					'taint_null'
+				END							AS	disposition_of_modifier
+			,	CASE	(		disposition_of_modifier			=	'taint_null'
+							AND	claims.ProcedureCodeModifier1	=	'JW'			)
+					WHEN	TRUE	THEN	claims.Units::FLOAT
+					WHEN	FALSE	THEN	0.0
+				END							AS	wasted_units
+			,	CASE	(		(		disposition_of_modifier			=	'tis_null'		)
+							OR	(		disposition_of_modifier			=	'taint_null'
+									AND	claims.ProcedureCodeModifier1	!=	'JW'			)	)
+					WHEN	TRUE	THEN	claims.Units::FLOAT
+					WHEN	FALSE	THEN	0.0
+				END							AS	administered_units
+			,	CASE	(		disposition_of_modifier			=	'taint_null'
+							AND	claims.ProcedureCodeModifier1	=	'JW'			)
+					WHEN	TRUE	THEN	claims.ClaimPaidAmount
+					WHEN	FALSE	THEN	0.0
+				END							AS	paid_for_wasted
+			,	CASE	(		(		disposition_of_modifier			=	'tis_null'		)
+							OR	(		disposition_of_modifier			=	'taint_null'
+									AND	claims.ProcedureCodeModifier1	!=	'JW'			)	)
+					WHEN	TRUE	THEN	claims.ClaimPaidAmount
+					WHEN	FALSE	THEN	0.0
+				END							AS	paid_for_administered
+			,	claims.Units				AS	units
+			,	claims.ClaimPaidAmount		AS	paid_amount
+			,	claims.ClaimAllowedAmount	AS	allowed_amount
+			,	claims.FirstDOS				AS	first_DOS
+			,	CASE		(		Units::float			&lt;	5.0		)
+						AND	(		ProcedureCodeModifier1	!=	'JW'
+								OR	ProcedureCodeModifier1	IS	NULL	)
+					WHEN	TRUE	THEN	'1'
+					WHEN	FALSE	THEN	'0'
+				END							AS	abnormality_pre_flag_D
+		FROM
+					ESRD_clean_raw.medical_claims							claims
+			JOIN	(	SELECT DISTINCT	member_ID
+						FROM			whaight.HFNY_herc_claims_clean	)	herc
+			ON		claims.MemberID	=	herc.member_ID
+		WHERE
+				claim_payment_status	=	'paid'
+			AND	administered			=	'herceptin'
+			AND	paid_amount				&gt;	0
+			AND	DATEDIFF( DAY, '2017-05-01', FirstDOS )	&gt;=	0
+		ORDER BY
+				member_ID	ASC
+			,	first_DOS	ASC
+	)
+GROUP BY
+		member_ID
+	,	first_DOS
+ORDER BY
+		member_ID	ASC
+	,	first_DOS	ASC
+);
+/*
+RESULTS:
+a	b	c	d	e
+17	36	0	129	679
+*/
+
+
+</SQL>
+    <Name>JW</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <File>../Current%20Code/whaight.HFNY_herc%20normalization.sql</File>
+    <Name>whaight.HFNY_herc normalization</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <File>../Current%20Code/whaight.HFNY_herc_claims_clean_reduced.sql</File>
+    <Name>whaight.HFNY_herc_claims_clean_reduced</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <SQL>create table ESRD_clean_raw.medical_claims
+(
+	ClaimNumber	varchar(50),
+	AdjustedClaim	varchar(50),
+	ClaimStatus	varchar(15),
+	ClaimType	varchar(1),
+	CheckNumber	varchar(20),
+	CheckDate	date,
+	ProcessedDate	date,
+	ReceivedDate	date,
+	MemberID	varchar(20),
+	CoveredIndividualID	varchar(20),
+	AdmitDate	date,
+	AdmissionHour	varchar(2),
+	AdmissionSource	varchar(2),
+	AdmitType	varchar(2),
+	DischargeDate	date,
+	DischargeHour 	varchar(2),
+	DischargeStatus	varchar(10),
+	Account_Plan_GroupID	varchar(30),
+	TypeOfBill	varchar(4),
+	InvoiceNumber	varchar(100),
+	ClaimSubmittedChargeAmount	numeric(10,2),
+	ClaimDisallowedAmount	numeric(10,2),
+	DisallowedReason1	varchar(100),
+	DisallowedReason2	varchar(100),
+	DisallowedReason3	varchar(100),
+	ClaimAllowedAmount	numeric(10,2),
+	ClaimPaidAmount	numeric(10,2),
+	ICD_10Indicator	varchar(1),
+	PrincipalProcedureCode	varchar(10),
+	PrincipalProcedureDate	date,
+	ICDProcedureCode2	varchar(10),
+	ICDProcedureDate2	date,
+	ICDProcedureCode3	varchar(10),
+	ICDProcedureDate3	date,
+	ICDProcedureCode4	varchar(10),
+	ICDProcedureDate4	date,
+	ICDProcedureCode5	varchar(10),
+	ICDProcedureDate5	date,
+	ICDProcedureCode6	varchar(10),
+	ICDProcedureDate6	date,
+	CPTCode1	varchar(10),
+	CPT1Date	date,
+	CPTCode2	varchar(10),
+	CPT2Date	date,
+	CPTCode3	varchar(10),
+	CPT3Date	date,
+	CPTCode4	varchar(10),
+	CPT4Date	date,
+	CPTCode5	varchar(10),
+	CPT5Date	date,
+	AdmittingDXCode	varchar(10),
+	PrimaryDXCode	varchar(10),
+	DXCode2	varchar(10),
+	DXCode3	varchar(10),
+	DXCode4	varchar(10),
+	DXCode5	varchar(10),
+	DXCode6	varchar(10),
+	DXCode7	varchar(10),
+	DXCode8	varchar(10),
+	DXCode9	varchar(10),
+	DXCode10	varchar(10),
+	DXCode11 	varchar(10),
+	DXCode12	varchar(10),
+	DXCode13	varchar(10),
+	DXCode14	varchar(10),
+	DXCode15	varchar(10),
+	DXCode16	varchar(10),
+	DXCode17	varchar(10),
+	DXCode18	varchar(10),
+	DXCode19	varchar(10),
+	DXCode20	varchar(10),
+	DXCode21	varchar(10),
+	DXCode22	varchar(10),
+	DXCode23	varchar(10),
+	DXCode24	varchar(10),
+	DXCode25	varchar(10),
+	DXCode26	varchar(10),
+	DXCode27	varchar(10),
+	DXCode28	varchar(10),
+	DXCode29	varchar(10),
+	DXCode30	varchar(10),
+	DXCode31	varchar(10),
+	DXCode32	varchar(10),
+	DXCode33	varchar(10),
+	DXCode34	varchar(10),
+	DXCode35	varchar(10),
+	DXCode36	varchar(10),
+	DXCode37	varchar(10),
+	DXCode38	varchar(10),
+	DXCode39	varchar(10),
+	DXCode40	varchar(10),
+	DRGCode	varchar(10),
+	DRGVersion	varchar(20),
+	DateOfAccident	date,
+	EmergencyRoomFlag	varchar(1),
+	MVAFlag	varchar(1),
+	WorkCompFlag	varchar(1),
+	AccidentFlag	varchar(1),
+	AccidentState	varchar(2),
+	AccidentHour	varchar(2),
+	InNetwork_OutofNetworkIndicator	varchar(1),
+	ReferringProviderIdentifier	varchar(15),
+	BillingProviderIdentifier	varchar(15),
+	ProviderPatientAccountNumber	varchar(30),
+	MedicalRecordNumber	varchar(30),
+	OccurrenceCode1	varchar(2),
+	OccurrenceCode1Date	date,
+	OccurrenceCode2	varchar(2),
+	OccurrenceCode2Date	date,
+	OccurrenceCode3	varchar(2),
+	OccurrenceCode3Date	date,
+	OccurrenceCode4	varchar(2),
+	OccurrenceCode4Date	date,
+	OccurrenceSpanCode1 varchar(2),
+	OccurrenceSpanFromDate1	date,
+	OccurrenceSpanToDate1	date,
+	OccurrenceSpanCode2	varchar(2),
+	OccurrenceSpanFromDate2	date,
+	OccurrenceSpanToDate2	date,
+	ConditionCode1	varchar(2),
+	ConditionCode2	varchar(2),
+	ConditionCode3	varchar(2),
+	ConditionCode4	varchar(2),
+	ConditionCode5	varchar(2),
+	ConditionCode6	varchar(2),
+	ConditionCode7	varchar(2),
+	ConditionCode8	varchar(2),
+	ConditionCode9	varchar(2),
+	ConditionCode10	varchar(2),
+	ConditionCode11	varchar(2),
+	ConditionCode12	varchar(2),
+	ValueCode1	varchar(2),
+	ValueCode1Amount	numeric(10,2),
+	ValueCode2	varchar(2),
+	ValueCode2Amount	numeric(10,2),
+	ValueCode3	varchar(2),
+	ValueCode3Amount	numeric(10,2),
+	ValueCode4	varchar(2),
+	ValueCode4Amount	numeric(10,2),
+	ValueCode5	varchar(2),
+	ValueCode5Amount	numeric(10,2),
+	ValueCode6	varchar(2),
+	ValueCode6Amount	numeric(10,2),
+	ValueCode7	varchar(2),
+	ValueCode7Amount	numeric(10,2),
+	ValueCode8	varchar(2),
+	ValueCode8Amount	numeric(10,2),
+	ValueCode9	varchar(2),
+	ValueCode9Amount	numeric(10,2),
+	ValueCode10	varchar(2),
+	ValueCode10Amount	numeric(10,2),
+	ValueCode11	varchar(2),
+	ValueCode11Amount	numeric(10,2),
+	ValueCode12	varchar(2),
+	ValueCode12Amount	numeric(10,2),
+	PayeeCode	varchar(10),
+	LineNumber	varchar(15),
+	DiagnosisCodePointer1	varchar(2),
+	DiagnosisCodePointer2	varchar(2),
+	DiagnosisCodePointer3	varchar(2),
+	DiagnosisCodePointer4	varchar(2),
+	ProcedureCode	varchar(10),
+	ProcedureCodeModifier1	varchar(2),
+	ProcedureCodeModifier2	varchar(2),
+	ProcedureCodeModifier3	varchar(2),
+	ProcedureCodeModifier4	varchar(2),
+	RevenueCode	varchar(10),
+	AccommodationRevenueCode	varchar(10),
+	AccommodationRate	varchar(10),
+	AncillaryRevenueCode	varchar(10),
+	EmergencyIndicator	varchar(1),
+	NDCCode	varchar(15),
+	DateWritten	date,
+	FirstDOS	date,
+	LastDOS	date,
+	Units	varchar(100),
+	Anesthesia	varchar(100),
+	ChargeAmount	numeric(10,2),
+	AllowedAmount	numeric(10,2),
+	NotAllowedAmount	numeric(10,2),
+	DeductibleAmount	numeric(10,2),
+	CopayAmount	numeric(10,2),
+	CoinsuranceAmount	numeric(10,2),
+	WouldPayAmount	numeric(10,2),
+	BenefitAmount	numeric(10,2),
+	ProviderDiscountAmount	numeric(10,2),
+	PlaceofService	varchar(2),
+	TypeofService	varchar(3),
+	PerformingProviderIdentifier	varchar(15),
+	COBIndicator	varchar(1),
+	COBAmount	numeric(10,2),
+	COBPayer	varchar(100),
+	COBDate	date,
+	CapitatedIndicator	varchar(1),
+	Remarks	varchar(100),
+	ClaimClientSpecificField1	varchar(50),
+	ClaimClientSpecificField2	varchar(50),
+	ClaimClientSpecificField3	varchar(50),
+	ClaimClientSpecificField4	varchar(50),
+	ClaimClientSpecificField5	varchar(50),
+	ClaimClientSpecificField6	varchar(50),
+	ClaimClientSpecificField7	varchar(50),
+	ClaimClientSpecificField8	varchar(50),
+	ClaimClientSpecificField9	varchar(50),
+	ClaimClientSpecificField10	varchar(50),
+	dhp_ch_ldos	date,
+	dhp_medclm_load_mo	int,
+	dhp_ci_id	varchar(50),
+	dhp_s_id	varchar(50),
+	dhp_a_id	varchar(100),
+	dhp_paid_amt	numeric(10,2),
+	dhp_perf_prv_id	varchar(50),
+	dhp_bill_prv_id	varchar(50),
+	dhp_ch_claim_status_cd	varchar(30),
+	dhp_cli_capitated_ind	smallint,
+	dhp_ch_emrg_room_ind	smallint,
+	dhp_ch_mva_ind	smallint,
+	dhp_ch_acc_ind	smallint,
+	dhp_ch_amb_ind	smallint,
+	dhp_ch_wc_ind	smallint,
+	dhp_ch_cob_ind	smallint,
+	dhp_check_nbr	int,
+	ch_acct1_segment	varchar(50),
+	ch_acct2_segment	varchar(50),
+	ch_acct3_segment	varchar(50),
+	ch_acct4_segment	varchar(50),
+	ch_acct5_segment	varchar(50),
+	ch_acct_name	varchar(100),
+	a_funding_cd	varchar(50),
+	cycle_sk	int,
+	eic_sk	int,
+	cl_sk	int,
+	cycle_created_date	timestamp,
+	filename	varchar(1000),
+	dhp_ch_claim_nbr	varchar(100),
+	dhp_ch_clm_line_nbr	varchar(50),
+	dhp_claim_form_type	int,
+	dhp_charge_amt	numeric(10,2),
+	ch_payment_status_cd_sk	int,
+	ch_received_date	timestamp,
+	eic_extract_dt	timestamp,
+	dhp_cli_status_cd	varchar(50),
+	dhp_claim_status	varchar(15),
+	dhp_proc_code	varchar(10)
+)
+diststyle	key
+distkey(CoveredIndividualID)
+interleaved sortkey(ClaimNumber, ICD_10Indicator,FirstDOS,PerformingProviderIdentifier,BillingProviderIdentifier)
+;
+
+
+SELECT	COUNT( ClaimNumber )
+FROM
+	(	SELECT DISTINCT		ClaimNumber
+						,	MemberID
+						,	CoveredIndividualID
+						,	FirstDOS
+		FROM			ESRD_clean_raw.medical_claims
+		WHERE				DATEDIFF( DAY, '2017-05-01', FirstDOS )	&gt;=	0
+						AND	(		CPTCode1		IN	( 'J9355' )
+								OR	CPTCode2		IN	( 'J9355' )
+								OR	CPTCode3		IN	( 'J9355' )
+								OR	CPTCode4		IN	( 'J9355' )
+								OR	CPTCode5		IN	( 'J9355' )
+								OR	ProcedureCode	IN	( 'J9355' )
+							)
+	)
+;
+/*	2504	*/
+		
+
+
+
+/*	WITH CPT FILTERS ONLY	*/
+SELECT	COUNT( claim_ID )
+FROM	(	SELECT DISTINCT	claim_ID
+			FROM			whaight.HFNY_herc_claims_clean	)
+;
+/*	2429	*/
+
+
+
+SELECT	COUNT( * )
+FROM
+	(
+			(	SELECT	claim_ID	AS	claim_ID
+				FROM	(	SELECT DISTINCT	claim_ID
+							FROM			whaight.HFNY_herc_claims_clean	)
+			)
+		INTERSECT
+			(	SELECT ClaimNumber	AS	claim_ID
+				FROM
+					(	SELECT DISTINCT		ClaimNumber
+										,	MemberID
+										,	CoveredIndividualID
+										,	FirstDOS
+						FROM			ESRD_clean_raw.medical_claims
+						WHERE				DATEDIFF( DAY, '2017-05-01', FirstDOS )	&gt;=	0
+										AND	(		CPTCode1		IN	( 'J9355' )
+												OR	CPTCode2		IN	( 'J9355' )
+												OR	CPTCode3		IN	( 'J9355' )
+												OR	CPTCode4		IN	( 'J9355' )
+												OR	CPTCode5		IN	( 'J9355' )
+												OR	ProcedureCode	IN	( 'J9355' )
+											)
+					)
+			)
+	)
+;
+/*	2429	*/
+
+
+
+SELECT	COUNT( * )
+FROM
+	(
+			(	SELECT ClaimNumber	AS	claim_ID
+				FROM
+					(	SELECT DISTINCT		ClaimNumber
+						--				,	MemberID
+						--				,	CoveredIndividualID
+						--				,	FirstDOS
+						FROM			ESRD_clean_raw.medical_claims
+						WHERE				DATEDIFF( DAY, '2017-05-01', FirstDOS )	&gt;=	0
+										AND	(		CPTCode1		IN	( 'J9355' )
+												OR	CPTCode2		IN	( 'J9355' )
+												OR	CPTCode3		IN	( 'J9355' )
+												OR	CPTCode4		IN	( 'J9355' )
+												OR	CPTCode5		IN	( 'J9355' )
+												OR	ProcedureCode	IN	( 'J9355' )
+											)
+					)
+				ORDER BY	claim_ID
+			)
+		MINUS
+			(	SELECT	claim_ID	AS	claim_ID
+				FROM	(	SELECT DISTINCT	claim_ID
+							FROM			whaight.HFNY_herc_claims_clean	)
+			)
+	)
+;
+
+
+
+/*	The basic info query	*/
+SELECT
+				ClaimNumber			AS	claim_ID
+			,	MemberID			AS	member_ID
+			,	LineNumber
+			,	CASE	ClaimStatus
+					WHEN	'D'	THEN	'unpaid'
+					WHEN	'F'	THEN	'paid'
+				END					AS	claim_payment_status
+			,	CASE	CPTCode1
+					WHEN	'J9355'	THEN	'herceptin'
+					ELSE					NULL
+				END					AS	administered
+			,	ProcedureCodeModifier1
+			,	Units
+			,	CASE		(		Units::float			&lt;	5.0		)
+						AND	(		ProcedureCodeModifier1	!=	'JW'
+								OR	ProcedureCodeModifier1	IS	NULL	)
+					WHEN	TRUE	THEN	'1'
+					WHEN	FALSE	THEN	'0'
+				END					AS		abnormality_pre_flag_D
+			,	ClaimPaidAmount
+			,	ClaimAllowedAmount
+			,	FirstDOS			AS	first_DOS
+FROM				ESRD_clean_raw.medical_claims							claims
+			JOIN	(	SELECT DISTINCT	claim_ID
+						FROM			whaight.HFNY_herc_claims_clean	)	herc
+			ON		claims.ClaimNumber	=	herc.claim_ID
+			WHERE		claim_payment_status	=	'paid'
+					AND	administered			=	'herceptin'
+--GROUP BY		member_ID
+--			,	claims.CPTCode1
+--			,	claims.ClaimNumber
+--			,	claims.linenumber
+--			,	claims.ClaimStatus
+ORDER BY		member_ID	ASC
+			,	first_DOS	ASC
+			,	claim_ID	ASC
+			,	LineNumber	ASC
+;
+
+
+
+/*	Variant on the above, but we aggreagate dollar amounts by date for each member claim	*/
+SELECT
+				MemberID			AS	member_ID
+			,	ClaimNumber			AS	claim_ID
+			,	CASE	ClaimStatus
+					WHEN	'D'	THEN	'unpaid'
+					WHEN	'F'	THEN	'paid'
+				END					AS	claim_payment_status
+			,	CASE	CPTCode1
+					WHEN	'J9355'	THEN	'herceptin'
+					ELSE					NULL
+				END					AS	administered
+			,	SUM( Units )
+			,	SUM( ClaimPaidAmount )
+			,	SUM( ClaimAllowedAmount )
+			,	FirstDOS			AS	first_DOS
+FROM				ESRD_clean_raw.medical_claims							claims
+			JOIN	(	SELECT DISTINCT	claim_ID
+						FROM			whaight.HFNY_herc_claims_clean	)	herc
+			ON		claims.ClaimNumber	=	herc.claim_ID
+			WHERE		claim_payment_status	=	'paid'
+					AND	administered			=	'herceptin'
+GROUP BY		claims.ClaimNumber
+			,	claims.MemberID
+			,	claims.CPTCode1
+			,	claims.ClaimStatus
+			,	claims.FirstDOS
+ORDER BY		member_ID	ASC
+			,	first_DOS	ASC
+;
+
+
+
+/*	Check into the flagged claims under A, B, C and D	*/
+SELECT		baseTable.member_ID
+		,	baseTable.claim_ID
+		,	baseTable.TOTAL_UNITS
+		,	baseTable.TOTAL_PAID
+		,	baseTable.TOTAL_ALLOWED
+		,	baseTable.first_DOS
+		,	baseTable.abnormality_flag_A
+		,	baseTable.abnormality_flag_B
+		,	baseTable.abnormality_flag_C
+		,	crmc.CPTCode1
+		,	crmc.ClaimSubmittedChargeAmount
+		,	crmc.LineNumber
+		,	crmc.ProcedureCode
+		,	crmc.ProcedureCodeModifier1
+		,	crmc.ProcedureCodeModifier2
+		,	crmc.Units
+		,	crmc.dhp_proc_code
+FROM
+	(	SELECT		member_ID
+				,	claim_ID
+				,	claim_payment_status
+				,	administered
+				,	TOTAL_UNITS
+				,	TOTAL_PAID
+				,	TOTAL_ALLOWED
+				,	first_DOS
+				,	CASE	TOTAL_UNITS &gt; 95
+						WHEN	TRUE	THEN	'1'
+						ELSE					'0'
+					END				AS	abnormality_flag_A
+				,	CASE	TOTAL_UNITS IN ( 44, 88 )
+						WHEN	TRUE	THEN	'1'
+						ELSE					'0'
+					END				AS	abnormality_flag_B
+				,	CASE	TOTAL_UNITS = 0
+						WHEN	TRUE	THEN	'1'
+						ELSE					'0'
+					END				AS	abnormality_flag_C
+		FROM
+			(	SELECT			MemberID					AS	member_ID
+							,	ClaimNumber					AS	claim_ID
+							,	CASE	ClaimStatus
+									WHEN	'D'	THEN	'unpaid'
+									WHEN	'F'	THEN	'paid'
+								END							AS	claim_payment_status
+							,	CASE	CPTCode1
+									WHEN	'J9355'	THEN	'herceptin'
+									ELSE					NULL
+								END							AS	administered
+							,	SUM( Units )				AS	TOTAL_UNITS
+							,	SUM( ClaimPaidAmount )		AS	TOTAL_PAID
+							,	SUM( ClaimAllowedAmount )	AS	TOTAL_ALLOWED
+							,	FirstDOS					AS	first_DOS
+				FROM				ESRD_clean_raw.medical_claims							claims
+							JOIN	(	SELECT DISTINCT	claim_ID
+										FROM			whaight.HFNY_herc_claims_clean	)	herc
+							ON		claims.ClaimNumber	=	herc.claim_ID
+							WHERE		claim_payment_status	=	'paid'
+									AND	administered			=	'herceptin'
+				GROUP BY		claims.ClaimNumber
+							,	claims.MemberID
+							,	claims.CPTCode1
+							,	claims.ClaimStatus
+							,	claims.FirstDOS
+			)
+	)								baseTable
+LEFT JOIN
+	ESRD_clean_raw.medical_claims	crmc
+ON		crmc.MemberID		=	baseTable.member_ID
+	AND	crmc.claimnumber	=	baseTable.claim_ID
+WHERE
+		abnormality_flag_A	=	'1'
+	OR	abnormality_flag_B	=	'1'
+	OR	abnormality_flag_C	=	'1'
+ORDER BY
+		baseTable.member_ID	ASC
+	,	baseTable.first_DOS	ASC
+;
+
+
+
+
+
+SELECT		sum(abnormality_flag_A)
+		,	sum(abnormality_flag_B)
+		,	sum(abnormality_flag_C)
+FROM
+(SELECT		member_ID
+		,	claim_ID
+		,	claim_payment_status
+		,	administered
+		,	TOTAL_UNITS
+		,	TOTAL_PAID
+		,	TOTAL_ALLOWED
+		,	first_DOS
+		,	CASE	TOTAL_UNITS &gt; 95
+				WHEN	TRUE	THEN	'1'
+				ELSE					'0'
+			END				AS	abnormality_flag_A
+		,	CASE	TOTAL_UNITS IN ( 44, 88 )
+				WHEN	TRUE	THEN	'1'
+				ELSE					'0'
+			END				AS	abnormality_flag_B
+		,	CASE	TOTAL_UNITS = 0
+				WHEN	TRUE	THEN	'1'
+				ELSE					'0'
+			END				AS	abnormality_flag_C
+FROM
+	(	SELECT			MemberID					AS	member_ID
+					,	ClaimNumber					AS	claim_ID
+					,	CASE	ClaimStatus
+							WHEN	'D'	THEN	'unpaid'
+							WHEN	'F'	THEN	'paid'
+						END							AS	claim_payment_status
+					,	CASE	CPTCode1
+							WHEN	'J9355'	THEN	'herceptin'
+							ELSE					NULL
+						END							AS	administered
+					,	SUM( Units )				AS	TOTAL_UNITS
+					,	SUM( ClaimPaidAmount )		AS	TOTAL_PAID
+					,	SUM( ClaimAllowedAmount )	AS	TOTAL_ALLOWED
+					,	FirstDOS					AS	first_DOS
+		FROM				ESRD_clean_raw.medical_claims							claims
+					JOIN	(	SELECT DISTINCT	claim_ID
+								FROM			whaight.HFNY_herc_claims_clean	)	herc
+					ON		claims.ClaimNumber	=	herc.claim_ID
+					WHERE		claim_payment_status	=	'paid'
+							AND	administered			=	'herceptin'
+		GROUP BY		claims.ClaimNumber
+					,	claims.MemberID
+					,	claims.CPTCode1
+					,	claims.ClaimStatus
+					,	claims.FirstDOS
+	)
+ORDER BY		member_ID	ASC
+			,	first_DOS	ASC)
+;
+
+
+
+
+
+/*	In this query, amount paid and total amount allowed are summed	*/
+/*	over herceptin claims and line numbers for each member_ID		*/
+SELECT
+--				ClaimNumber			AS	claim_ID
+				MemberID			AS	member_ID
+--			,	LineNumber
+			,	CASE	ClaimStatus
+					WHEN	'D'	THEN	'unpaid'
+					WHEN	'F'	THEN	'paid'
+				END					AS	claim_payment_status
+			,	CASE	CPTCode1
+					WHEN	'J9355'	THEN	'herceptin'
+					ELSE					NULL
+				END					AS	administered
+--			,	ProcedureCodeModifier1
+--			,	Units
+			,	SUM( ClaimPaidAmount )		TOTAL_PAID
+			,	SUM( ClaimAllowedAmount )	TOTAL_ALLOWED
+--			,	FirstDOS			AS	first_DOS
+FROM				ESRD_clean_raw.medical_claims							claims
+			JOIN	(	SELECT DISTINCT	claim_ID
+						FROM			whaight.HFNY_herc_claims_clean	)	herc
+			ON		claims.ClaimNumber	=	herc.claim_ID
+			WHERE		claim_payment_status	=	'paid'
+					AND	administered			=	'herceptin'
+GROUP BY		member_ID
+			,	claims.CPTCode1
+--			,	claims.ClaimNumber
+--			,	claims.linenumber
+			,	claims.ClaimStatus
+ORDER BY		member_ID	ASC
+--			,	first_DOS	ASC
+--			,	claim_ID	ASC
+--			,	LineNumber	ASC
+;
+
+
+
+/*	This query is to check which CPT codes indicate herceptin.	*/
+SELECT	*
+FROM
+	(	SELECT 			ClaimNumber			AS	claim_ID
+					,	MemberID			AS	member_ID
+					,	LineNumber
+					,	CASE	ClaimStatus
+							WHEN	'D'	THEN	'unpaid'
+							WHEN	'F'	THEN	'paid'
+						END					AS	claim_payment_status
+					,	CASE	CPTCode1
+							WHEN	'J9355'	THEN	'herceptin'
+							ELSE					NULL
+						END					AS	administered1
+					,	CASE	CPTCode2
+							WHEN	'J9355'	THEN	'herceptin'
+							ELSE					NULL
+						END					AS	administered2
+					,	CASE	CPTCode3
+							WHEN	'J9355'	THEN	'herceptin'
+							ELSE					NULL
+						END					AS	administered3
+					,	CASE	CPTCode4
+							WHEN	'J9355'	THEN	'herceptin'
+							ELSE					NULL
+						END					AS	administered4
+					,	CASE	CPTCode5
+							WHEN	'J9355'	THEN	'herceptin'
+							ELSE					NULL
+						END					AS	administered5
+					,	ProcedureCodeModifier1
+					,	Units
+					,	ClaimPaidAmount
+					,	ClaimAllowedAmount
+					,	FirstDOS			AS	first_DOS
+		FROM				ESRD_clean_raw.medical_claims							claims
+					JOIN	(	SELECT DISTINCT	claim_ID
+								FROM			whaight.HFNY_herc_claims_clean	)	herc
+					ON		claims.ClaimNumber	=	herc.claim_ID
+					WHERE		claim_payment_status	=	'paid'
+							AND	(		administered1	=	'herceptin'
+									OR	administered2	=	'herceptin'
+									OR	administered3	=	'herceptin'
+									OR	administered4	=	'herceptin'
+									OR	administered5	=	'herceptin'	)
+		ORDER BY		member_ID	ASC
+					,	first_DOS	ASC
+					,	claim_ID	ASC
+					,	LineNumber	ASC
+	)
+WHERE
+		administered2	IS NOT	NULL
+	OR	administered3	IS NOT	NULL
+	OR	administered4	IS NOT	NULL
+	OR	administered5	IS NOT	NULL
+;
+/*	For HFNY, the CPT code indication of herceptin ONLY comes in CPTCode1	*/
+
+
+
+/*	This query checks to bold claim above directly against the HFNY raw medical claims.	*/
+SELECT	COUNT( * )
+FROM	ESRD_clean_raw.medical_claims
+WHERE		CPTCode1		LIKE	'J9355'
+		OR	CPTCode2		LIKE	'J9355'
+		OR	CPTCode3		LIKE	'J9355'
+		OR	CPTCode4		LIKE	'J9355'
+		OR	CPTCode5		LIKE	'J9355'
+		OR	ProcedureCode	LIKE	'J9355'
+;
+/*	0	*/
+
+
+
+SELECT	COUNT( * )
+FROM	ESRD_clean_raw.medical_claims
+WHERE	CPTCode1	LIKE	'J9355'
+;
+
+
+
+
+SELECT DISTINCT	ProcedureCodeModifier1
+FROM	ESRD_clean_raw.medical_claims
+WHERE	CPTCode1	LIKE	'J9355'
+;
+/*	procedurecodemodifier1
+
+JG	--	effective 1/1/18 for outpatient Medicare FFS (fee-for-service) claims when any status
+indicator K drugs (Non pass-through drugs and biologicals, and blood and blood products) are
+involved. It will be required for any 340B hospitals (The 340B Drug Discount Program is a US
+federal government program created in 1992 that requires drug manufacturers to provide outpatient
+drugs to eligible health care organizations and covered entities at significantly reduced prices).
+
+JW	--	The JW modifier is a Healthcare Common Procedure Coding System (HCPCS) Level II modifier
+used on a Medicare Part B drug claim to report the amount of drug or biological (hereafter referred
+to as drug) that is discarded and eligible for payment under the discarded drug policy.
+
+KO	--	SINGLE DRUG UNIT DOSE FORMULATION
+
+KP -- Append to appropriate code (one of unit dose form codes) when two or more drugs are combined
+and dispensed to beneficiary in same unit dose container, each drug is billed using its unit dose
+form code. Append KQ modifier to other unit dose code(s)
+
+PO	--	Services, procedures and/or surgeries performed at off-campus provider-based outpatient
+departments
+
+SL	--	state supplied vaccine at no cost to provider
+
+UD	--	The UD modifier is defined as “Medicaid level of care 13, as defined by each state.”
+Some states require that, when billing Medicaid for 340B drugs on a fee‐for‐service basis,
+covered entities use UD modifiers as a way to identify that the claim submitted relates to
+a 340B drug
+
+NULL
+*/
+
+select count(*)
+from(
+select distinct memberID
+from	ESRD_clean_raw.medical_claims
+where	DATEDIFF( DAY, '2017-05-01', firstdos )	&gt;=	0
+);
+/*	1,426,608	*/
+
+
+
+</SQL>
+    <Name>ESRD_clean_raw.medical_claims</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <File>../../../Downloads/Austin's%20EM%20code/HFNY_EM.sql</File>
+    <Name>HFNY_EM</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <Name>Tab 12</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <SQL>SELECT DISTINCT	ClaimType
+FROM			ESRD_clean_raw.medical_claims;
+
+
+
+SELECT DISTINCT	claim_Type
+FROM			whaight.HFNY_herc_claims_clean_reduced_aprivett;
+
+
+
+SELECT	COUNT( ClaimNumber )
+FROM	ESRD_clean_raw.medical_claims
+--WHERE	claimtypecode = '5'
+;
+--	Result is:	248076088
+
+SELECT	COUNT( ClaimNumber )
+FROM	ESRD_clean_raw.medical_claims
+WHERE	ClaimType = 'I'
+;
+--	Result is:	87694690	OR	0.35349917
+
+SELECT	COUNT( ClaimNumber )
+FROM	ESRD_clean_raw.medical_claims
+WHERE	ClaimType = 'P'
+;
+--	Result is:	160381398	OR	0.64650083
+
+
+SELECT DISTINCT	TypeofService
+FROM			ESRD_clean_raw.medical_claims
+
+
+
+SELECT DISTINCT	CPT_Code
+FROM			whaight.HFNY_herc_claims_CPT_Codes
+ORDER BY		CPT_Code	ASC;
+
+
+SELECT DISTINCT	TypeofService
+FROM			ESRD_clean_raw.medical_claims
+ORDER BY		TypeofService	ASC;
+
+'CP'
+'DG'
+'HC'
+'HG'
+'HP'
+'RV'
+'XX'
+
+
+
+DROP TABLE IF EXISTS	whaight.HFNY_Specialty_Taxonomy_xwalk;
+CREATE TABLE			whaight.HFNY_Specialty_Taxonomy_xwalk
+(		note					VARCHAR(   2 )	ENCODE	RAW
+	,	med_Spec_Code			VARCHAR(   2 )	ENCODE	RAW
+	,	med_Spec_Code_Desc		VARCHAR(  74 )	ENCODE	RAW
+	,	prov_Taxonomy_Code		VARCHAR(  21 )	ENCODE	RAW
+	,	prov_Taxonomy_Code_Desc	VARCHAR( 185 )	ENCODE	RAW
+)
+DISTSTYLE	KEY
+DISTKEY( prov_Taxonomy_Code )
+INTERLEAVED SORTKEY(
+		med_Spec_Code
+	,	prov_Taxonomy_Code	);
+
+
+COPY		whaight.HFNY_Specialty_Taxonomy_xwalk
+FROM		's3://dhp-randlab-s3/users/whaight/Specialty_Taxonomy_xwalk.txt'
+credentials 'aws_iam_role=arn:aws:iam::722648170004:role/Data_Wranglers'
+ACCEPTANYDATE ACCEPTINVCHARS '^' BLANKSASNULL EMPTYASNULL NULL AS 'NULL' IGNOREBLANKLINES DATEFORMAT 'auto'
+IGNOREHEADER 1 TRIMBLANKS DELIMITER '\t' STATUPDATE ON MAXERROR 0 COMPUPDATE ON;
+
+--ANALYZE COMPRESSION		whaight.HFNY_Specialty_Taxonomy_xwalk;
+ANALYZE					whaight.HFNY_Specialty_Taxonomy_xwalk;
+VACUUM SORT ONLY		whaight.HFNY_Specialty_Taxonomy_xwalk;
+ANALYZE					whaight.HFNY_Specialty_Taxonomy_xwalk;
+
+
+/*
+SELECT		*
+FROM		stl_load_errors
+ORDER BY	starttime	DESC;
+
+SELECT		MAX( LEN( note ) )						AS	note
+		,	MAX( LEN( med_Spec_Code ) )				AS	med_Spec_Code
+		,	MAX( LEN( med_Spec_Code_Desc ) )		AS	med_Spec_Code_Desc
+		,	MAX( LEN( prov_Taxonomy_Code ) )		AS	prov_Taxonomy_Code
+		,	MAX( LEN( prov_Taxonomy_Code_Desc ) )	AS	prov_Taxonomy_Code_Desc
+FROM	whaight.HFNY_Specialty_Taxonomy_xwalk;
+*/
+
+GRANT USAGE
+ON SCHEMA		whaight
+TO				aprivett;
+
+GRANT SELECT
+ON TABLE		whaight.HFNY_Specialty_Taxonomy_xwalk
+TO				aprivett;
+
+
+
+SELECT DISTINCT	PrimarySpecialty
+FROM			ESRD_clean_raw.provider_info
+ORDER BY		PrimarySpecialty;
+
+</SQL>
+    <Name>Tab 5</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <File>../../../Downloads/Austin's%20EM%20code/simple-rules.sql</File>
+    <Name>simple-rules</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <File>../../../Downloads/Austin's%20EM%20code/2-facility.sql</File>
+    <Name>2-facility</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <File>../../../Downloads/Austin's%20EM%20code/3-professional.sql</File>
+    <Name>3-professional</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <File>../../../Downloads/Austin's%20EM%20code/1-make-table.sql</File>
+    <Name>1-make-table</Name>
+  </Query>
+</QuerySet>

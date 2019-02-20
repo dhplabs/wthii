@@ -1,0 +1,2035 @@
+<QuerySet>
+  <Query IsView="False" IsSP="False">
+    <File>../Current%20Code/BHI%20Normalization/BHI_Adv_Norm_1.sql</File>
+    <Name>BHI_Adv_Norm_1</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <File>../Current%20Code/BHI%20Normalization/BHI_Adv_Norm_2.sql</File>
+    <Name>BHI_Adv_Norm_2</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <SQL>DROP TABLE IF EXISTS	whaight.BHI_claims_ICD_codes;
+CREATE TABLE			whaight.BHI_claims_ICD_codes
+(		claim_ID						VARCHAR( 12 )	ENCODE	ZSTD	--  both
+	,	member_ID						VARCHAR( 12 )	ENCODE	ZSTD	--  both
+	/*	Facility claims table, 'F', Professional table, 'P'	*/
+    ,   claim_Source                    VARCHAR(  1 )	ENCODE	ZSTD	--	NEW!
+	,	ICD_Code_Type					VARCHAR(  1 )	ENCODE	ZSTD	--  both
+	,	admitting_ICD9_DX_Code			VARCHAR(  7 )	ENCODE	ZSTD	--	NOT in Professional
+	,	primary_ICD9_DX_Code			VARCHAR(  7 )	ENCODE	ZSTD	--  both
+	,	secondary_ICD9_DX_Code1			VARCHAR(  7 )	ENCODE	ZSTD	--  both
+	,	secondary_ICD9_DX_Code2			VARCHAR(  7 )	ENCODE	ZSTD	--  both
+	,	secondary_ICD9_DX_Code3			VARCHAR(  7 )	ENCODE	ZSTD	--  both
+	,	secondary_ICD9_DX_Code4			VARCHAR(  7 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD9_DX_Code5			VARCHAR(  7 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD9_DX_Code6			VARCHAR(  7 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD9_DX_Code7			VARCHAR(  7 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD9_DX_Code8			VARCHAR(  7 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD9_DX_Code9			VARCHAR(  7 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD9_DX_Code10		VARCHAR(  7 )	ENCODE	ZSTD	--  NOT in Professional
+	,	principal_ICD9_Proc_Code		VARCHAR(  6 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD9_Proc_Code1		VARCHAR(  6 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD9_Proc_Code2		VARCHAR(  6 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD9_Proc_Code3		VARCHAR(  6 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD9_Proc_Code4		VARCHAR(  6 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD9_Proc_Code5		VARCHAR(  6 )	ENCODE	ZSTD	--  NOT in Professional
+	,	admitting_ICD10_DX_Code			VARCHAR(  8 )	ENCODE	ZSTD	--	NOT in Professional
+	,	primary_ICD10_DX_Code			VARCHAR(  8 )	ENCODE	ZSTD	--  both
+	,	secondary_ICD10_DX_Code1		VARCHAR(  8 )	ENCODE	ZSTD	--  both
+	,	secondary_ICD10_DX_Code2		VARCHAR(  8 )	ENCODE	ZSTD	--  both
+	,	secondary_ICD10_DX_Code3		VARCHAR(  8 )	ENCODE	ZSTD	--  both
+	,	secondary_ICD10_DX_Code4		VARCHAR(  8 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD10_DX_Code5		VARCHAR(  8 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD10_DX_Code6		VARCHAR(  8 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD10_DX_Code7		VARCHAR(  8 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD10_DX_Code8		VARCHAR(  8 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD10_DX_Code9		VARCHAR(  8 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD10_DX_Code10		VARCHAR(  8 )	ENCODE	ZSTD	--  NOT in Professional
+	,	principal_ICD10_Proc_Code		VARCHAR(  7 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD10_Proc_Code1		VARCHAR(  7 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD10_Proc_Code2		VARCHAR(  7 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD10_Proc_Code3		VARCHAR(  7 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD10_Proc_Code4		VARCHAR(  7 )	ENCODE	ZSTD	--  NOT in Professional
+	,	secondary_ICD10_Proc_Code5		VARCHAR(  7 )	ENCODE	ZSTD	--  NOT in Professional
+)
+DISTSTYLE KEY
+DISTKEY( member_ID )
+COMPOUND SORTKEY(
+		member_ID
+	,	claim_ID
+	,	primary_ICD10_DX_Code
+);
+
+
+
+INSERT INTO	whaight.BHI_claims_ICD_codes
+(		SELECT DISTINCT
+				claim_ID						::	VARCHAR( 12 )	AS	claim_ID
+			,	member_ID						::	VARCHAR( 12 )	AS	member_ID
+			,   'F'								::  VARCHAR(  1 )	AS  claim_Source
+			,	ICD_Code_Type					::	VARCHAR(  1 )	AS	ICD_Code_Type
+			,	REGEXP_REPLACE( admitting_ICD9_DX_Code, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  7 )	AS	admitting_ICD9_DX_Code
+			,	REGEXP_REPLACE( primary_ICD9_DX_Code, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  7 )	AS	primary_ICD9_DX_Code
+			,	REGEXP_REPLACE( secondary_ICD9_DX_Code1, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  7 )	AS	secondary_ICD9_DX_Code1
+			,	REGEXP_REPLACE( secondary_ICD9_DX_Code2, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  7 )	AS	secondary_ICD9_DX_Code2
+			,	REGEXP_REPLACE( secondary_ICD9_DX_Code3, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  7 )	AS	secondary_ICD9_DX_Code3
+			,	REGEXP_REPLACE( secondary_ICD9_DX_Code4, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  7 )	AS	secondary_ICD9_DX_Code4
+			,	REGEXP_REPLACE( secondary_ICD9_DX_Code5, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  7 )	AS	secondary_ICD9_DX_Code5
+			,	REGEXP_REPLACE( secondary_ICD9_DX_Code6, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  7 )	AS	secondary_ICD9_DX_Code6
+			,	REGEXP_REPLACE( secondary_ICD9_DX_Code7, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  7 )	AS	secondary_ICD9_DX_Code7
+			,	REGEXP_REPLACE( secondary_ICD9_DX_Code8, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  7 )	AS	secondary_ICD9_DX_Code8
+			,	REGEXP_REPLACE( secondary_ICD9_DX_Code9, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  7 )	AS	secondary_ICD9_DX_Code9
+			,	REGEXP_REPLACE( secondary_ICD9_DX_Code10, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  7 )	AS	secondary_ICD9_DX_Code10
+			,	REGEXP_REPLACE( principal_ICD9_Procedure_Code, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  6 )	AS	principal_ICD9_Proc_Code
+			,	REGEXP_REPLACE( secondary_ICD9_Procedure_Code1, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  6 )	AS	secondary_ICD9_Proc_Code1
+			,	REGEXP_REPLACE( secondary_ICD9_Procedure_Code2, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  6 )	AS	secondary_ICD9_Proc_Code2
+			,	REGEXP_REPLACE( secondary_ICD9_Procedure_Code3, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  6 )	AS	secondary_ICD9_Proc_Code3
+			,	REGEXP_REPLACE( secondary_ICD9_Procedure_Code4, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  6 )	AS	secondary_ICD9_Proc_Code4
+			,	REGEXP_REPLACE( secondary_ICD9_Procedure_Code5, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  6 )	AS	secondary_ICD9_Proc_Code5
+			,	REGEXP_REPLACE( admitting_ICD10_DX_Code, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	admitting_ICD10_DX_Code
+			,	REGEXP_REPLACE( primary_ICD10_DX_Code, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	primary_ICD10_DX_Code
+			,	REGEXP_REPLACE( secondary_ICD10_DX_Code1, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code1
+			,	REGEXP_REPLACE( secondary_ICD10_DX_Code2, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code2
+			,	REGEXP_REPLACE( secondary_ICD10_DX_Code3, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code3
+			,	REGEXP_REPLACE( secondary_ICD10_DX_Code4, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code4
+			,	REGEXP_REPLACE( secondary_ICD10_DX_Code5, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code5
+			,	REGEXP_REPLACE( secondary_ICD10_DX_Code6, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code6
+			,	REGEXP_REPLACE( secondary_ICD10_DX_Code7, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code7
+			,	REGEXP_REPLACE( secondary_ICD10_DX_Code8, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code8
+			,	REGEXP_REPLACE( secondary_ICD10_DX_Code9, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code9
+			,	REGEXP_REPLACE( secondary_ICD10_DX_Code10, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code10
+			,	REGEXP_REPLACE( principal_ICD10_Procedure_Code, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  7 )	AS	principal_ICD10_Proc_Code
+			,	REGEXP_REPLACE( secondary_ICD10_Procedure_Code1, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  7 )	AS	secondary_ICD10_Proc_Code1
+			,	REGEXP_REPLACE( secondary_ICD10_Procedure_Code2, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  7 )	AS	secondary_ICD10_Proc_Code2
+			,	REGEXP_REPLACE( secondary_ICD10_Procedure_Code3, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  7 )	AS	secondary_ICD10_Proc_Code3
+			,	REGEXP_REPLACE( secondary_ICD10_Procedure_Code4, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  7 )	AS	secondary_ICD10_Proc_Code4
+			,	REGEXP_REPLACE( secondary_ICD10_Procedure_Code5, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  7 )	AS	secondary_ICD10_Proc_Code5
+		FROM
+			clean_raw.BHI_Facility_Claim_Header
+	UNION
+	    SELECT DISTINCT
+				claim_ID						::	VARCHAR( 12 )	AS	claim_ID
+            ,	member_ID						::	VARCHAR( 12 )	AS	member_ID
+            ,   'P'								::  VARCHAR(  1 )	AS  claim_Source
+		    ,	ICD_Code_Type					::	VARCHAR(  1 )	AS	ICD_Code_Type
+			,	NULL							::	VARCHAR(  7 )	AS	admitting_ICD10_DX_Code
+			,	REGEXP_REPLACE( primary_ICD9_DX_Code, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  7 )	AS	primary_ICD9_DX_Code
+			,	REGEXP_REPLACE( secondary_ICD9_DX_Code1, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  7 )	AS	secondary_ICD9_DX_Code1
+			,	REGEXP_REPLACE( secondary_ICD9_DX_Code2, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  7 )	AS	secondary_ICD9_DX_Code2
+			,	REGEXP_REPLACE( secondary_ICD9_DX_Code3, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  7 )	AS	secondary_ICD9_DX_Code3
+			,	NULL							::	VARCHAR(  7 )	AS	secondary_ICD9_DX_Code4
+			,	NULL							::	VARCHAR(  7 )	AS	secondary_ICD9_DX_Code5
+			,	NULL							::	VARCHAR(  7 )	AS	secondary_ICD9_DX_Code6
+			,	NULL							::	VARCHAR(  7 )	AS	secondary_ICD9_DX_Code7
+			,	NULL							::	VARCHAR(  7 )	AS	secondary_ICD9_DX_Code8
+			,	NULL							::	VARCHAR(  7 )	AS	secondary_ICD9_DX_Code9
+			,	NULL							::	VARCHAR(  7 )	AS	secondary_ICD9_DX_Code10
+			,	NULL							::	VARCHAR(  6 )	AS	principal_ICD9_Proc_Code
+			,	NULL							::	VARCHAR(  6 )	AS	secondary_ICD9_Proc_Code1
+			,	NULL							::	VARCHAR(  6 )	AS	secondary_ICD9_Proc_Code2
+			,	NULL							::	VARCHAR(  6 )	AS	secondary_ICD9_Proc_Code3
+			,	NULL							::	VARCHAR(  6 )	AS	secondary_ICD9_Proc_Code4
+			,	NULL							::	VARCHAR(  6 )	AS	secondary_ICD9_Proc_Code5
+			,	NULL							::	VARCHAR(  8 )	AS	admitting_ICD10_DX_Code
+			,	REGEXP_REPLACE( primary_ICD10_DX_Code, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	primary_ICD10_DX_Code
+			,	REGEXP_REPLACE( secondary_ICD10_DX_Code1, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code1
+			,	REGEXP_REPLACE( secondary_ICD10_DX_Code2, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code2
+			,	REGEXP_REPLACE( secondary_ICD10_DX_Code3, '[^a-zA-Z0-9]+', '' )
+												::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code3
+			,	NULL							::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code4
+			,	NULL							::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code5
+			,	NULL							::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code6
+			,	NULL							::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code7
+			,	NULL							::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code8
+			,	NULL							::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code9
+			,	NULL							::	VARCHAR(  8 )	AS	secondary_ICD10_DX_Code10
+			,	NULL							::	VARCHAR(  7 )	AS	principal_ICD10_Proc_Code
+			,	NULL							::	VARCHAR(  7 )	AS	secondary_ICD10_Proc_Code1
+			,	NULL							::	VARCHAR(  7 )	AS	secondary_ICD10_Proc_Code2
+			,	NULL							::	VARCHAR(  7 )	AS	secondary_ICD10_Proc_Code3
+			,	NULL							::	VARCHAR(  7 )	AS	secondary_ICD10_Proc_Code4
+			,	NULL							::	VARCHAR(  7 )	AS	secondary_ICD10_Proc_Code5
+		FROM
+			clean_raw.BHI_Professional_Claims
+	);
+--ANALYZE COMPRESSION		whaight.BHI_claims_ICD_codes;
+ANALYZE					whaight.BHI_claims_ICD_codes;
+VACUUM SORT ONLY		whaight.BHI_claims_ICD_codes;
+ANALYZE					whaight.BHI_claims_ICD_codes;
+
+
+
+DROP TABLE IF EXISTS	whaight.BHI_master_list_of_claims;
+CREATE TABLE			whaight.BHI_master_list_of_claims
+(		claim_ID	VARCHAR( 12 )	ENCODE	ZSTD
+	,	member_ID	VARCHAR( 12 )	ENCODE	ZSTD
+)
+DISTSTYLE KEY
+DISTKEY( member_ID )
+COMPOUND SORTKEY(
+		member_ID
+	,	claim_ID
+);
+
+
+
+INSERT INTO	whaight.BHI_master_list_of_claims
+(	SELECT DISTINCT
+			claim_ID	::	VARCHAR( 12 )	AS	claim_ID
+		,	member_ID	::	VARCHAR( 12 )	AS	member_ID
+	FROM
+		whaight.BHI_claims_ICD_codes
+);
+--ANALYZE COMPRESSION	whaight.BHI_master_list_of_claims;
+ANALYZE				whaight.BHI_master_list_of_claims;
+VACUUM SORT ONLY	whaight.BHI_master_list_of_claims;
+ANALYZE				whaight.BHI_master_list_of_claims;
+
+
+
+DROP TABLE IF EXISTS	whaight.BHI_master_list_of_ICD10_DX_codes_in_claims;
+CREATE TABLE			whaight.BHI_master_list_of_ICD10_DX_codes_in_claims
+(	icd10_DX_code	VARCHAR( 8 )	ENCODE	ZSTD	)
+DISTSTYLE KEY
+DISTKEY( icd10_DX_code )
+COMPOUND SORTKEY( icd10_DX_code );
+
+
+
+INSERT INTO	whaight.BHI_master_list_of_ICD10_DX_codes_in_claims
+(			SELECT DISTINCT admitting_ICD10_DX_Code		::	VARCHAR( 8 )	AS	icd10_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	primary_ICD10_DX_Code		::	VARCHAR( 8 )	AS	icd10_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	secondary_ICD10_DX_Code1	::	VARCHAR( 8 )	AS	icd10_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	secondary_ICD10_DX_Code2	::	VARCHAR( 8 )	AS	icd10_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	secondary_ICD10_DX_Code3	::	VARCHAR( 8 )	AS	icd10_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	secondary_ICD10_DX_Code4	::	VARCHAR( 8 )	AS	icd10_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	secondary_ICD10_DX_Code5	::	VARCHAR( 8 )	AS	icd10_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	secondary_ICD10_DX_Code6	::	VARCHAR( 8 )	AS	icd10_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	secondary_ICD10_DX_Code7	::	VARCHAR( 8 )	AS	icd10_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	secondary_ICD10_DX_Code8	::	VARCHAR( 8 )	AS	icd10_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	secondary_ICD10_DX_Code9	::	VARCHAR( 8 )	AS	icd10_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	secondary_ICD10_DX_Code10	::	VARCHAR( 8 )	AS	icd10_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+);
+--ANALYZE COMPRESSION	whaight.BHI_master_list_of_ICD10_DX_codes_in_claims;
+ANALYZE				whaight.BHI_master_list_of_ICD10_DX_codes_in_claims;
+VACUUM SORT ONLY	whaight.BHI_master_list_of_ICD10_DX_codes_in_claims;
+ANALYZE				whaight.BHI_master_list_of_ICD10_DX_codes_in_claims;
+
+
+
+SELECT			icd10_DX_code
+			,	COUNT(icd10_DX_code)	multiplicity
+FROM		whaight.BHI_master_list_of_ICD10_DX_codes_in_claims
+GROUP BY	icd10_DX_code
+HAVING		multiplicity	&gt;	1
+ORDER BY	icd10_DX_code
+--LIMIT		500
+;
+
+
+
+DROP TABLE IF EXISTS	whaight.BHI_master_list_of_ICD9_DX_codes_in_claims;
+CREATE TABLE			whaight.BHI_master_list_of_ICD9_DX_codes_in_claims
+(	ICD9_DX_code	VARCHAR( 7 )	ENCODE	ZSTD	)
+DISTSTYLE KEY
+DISTKEY( ICD9_DX_code )
+COMPOUND SORTKEY( ICD9_DX_code );
+
+
+
+INSERT INTO	whaight.BHI_master_list_of_ICD9_DX_codes_in_claims
+(			SELECT DISTINCT admitting_ICD9_DX_Code		::	VARCHAR( 7 )	AS	ICD9_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	primary_ICD9_DX_Code		::	VARCHAR( 7 )	AS	ICD9_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	secondary_ICD9_DX_Code1		::	VARCHAR( 7 )	AS	ICD9_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	secondary_ICD9_DX_Code2		::	VARCHAR( 7 )	AS	ICD9_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	secondary_ICD9_DX_Code3		::	VARCHAR( 7 )	AS	ICD9_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	secondary_ICD9_DX_Code4		::	VARCHAR( 7 )	AS	ICD9_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	secondary_ICD9_DX_Code5		::	VARCHAR( 7 )	AS	ICD9_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	secondary_ICD9_DX_Code6		::	VARCHAR( 7 )	AS	ICD9_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	secondary_ICD9_DX_Code7		::	VARCHAR( 7 )	AS	ICD9_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	secondary_ICD9_DX_Code8		::	VARCHAR( 7 )	AS	ICD9_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	secondary_ICD9_DX_Code9		::	VARCHAR( 7 )	AS	ICD9_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+	UNION	SELECT DISTINCT	secondary_ICD9_DX_Code10	::	VARCHAR( 7 )	AS	ICD9_DX_code
+			FROM			whaight.BHI_claims_ICD_codes
+);
+--ANALYZE COMPRESSION	whaight.BHI_master_list_of_ICD9_DX_codes_in_claims;
+ANALYZE				whaight.BHI_master_list_of_ICD9_DX_codes_in_claims;
+VACUUM SORT ONLY	whaight.BHI_master_list_of_ICD9_DX_codes_in_claims;
+ANALYZE				whaight.BHI_master_list_of_ICD9_DX_codes_in_claims;
+
+
+
+SELECT			ICD9_DX_code
+			,	COUNT(ICD9_DX_code)	multiplicity
+FROM		whaight.BHI_master_list_of_ICD9_DX_codes_in_claims
+GROUP BY	ICD9_DX_code
+HAVING		multiplicity	&gt;	1
+ORDER BY	ICD9_DX_code
+--LIMIT		500
+;
+
+6al
+
+DROP TABLE IF EXISTS	whaight.BHI_ICD10_DX_code_frequencies;
+CREATE TABLE			whaight.BHI_ICD10_DX_code_frequencies
+(		icd10_DX_code	VARCHAR( 8 )	ENCODE	RAW
+	,	frequency		INTEGER			ENCODE	RAW
+)
+DISTSTYLE KEY
+DISTKEY( icd10_DX_code )
+COMPOUND SORTKEY( icd10_DX_code );
+
+
+
+INSERT INTO	whaight.BHI_ICD10_DX_code_frequencies
+(	SELECT DISTINCT		codes.icd10_DX_code			::	VARCHAR( 8 )	AS	icd10_DX_code
+					,	COUNT( claims.claim_ID )	::	INTEGER			AS	frequency
+	FROM				whaight.BHI_master_list_of_claims					claims
+			JOIN		whaight.BHI_claims_ICD_codes						dat
+			ON				claims.claim_ID		=	dat.claim_ID
+						AND	claims.member_ID	=	dat.member_ID
+					,	whaight.BHI_master_list_of_ICD10_DX_codes_in_claims	codes
+	WHERE			codes.icd10_DX_code	=	dat.admitting_ICD10_DX_Code
+			OR		codes.icd10_DX_code	=	dat.primary_ICD10_DX_Code
+			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code1
+			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code2
+			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code3
+			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code4
+			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code5
+			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code6
+			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code7
+			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code8
+			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code9
+			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code10
+	GROUP BY	icd10_DX_code
+);
+ANALYZE COMPRESSION	whaight.BHI_ICD10_DX_code_frequencies;
+ANALYZE				whaight.BHI_ICD10_DX_code_frequencies;
+VACUUM SORT ONLY	whaight.BHI_ICD10_DX_code_frequencies;
+ANALYZE				whaight.BHI_ICD10_DX_code_frequencies;
+
+
+SELECT	*	FROM	whaight.BHI_ICD10_DX_code_frequencies	LIMIT	500;
+
+</SQL>
+    <Name>Tab 9</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <SQL>/********************************************************************************/
+/*																				*/
+/*	FILE:			BHI_Adv_Norm_2												*/
+/*	PROGRAMMED BY:	Will Haight (wthii)											*/
+/*	DATE:			December 31, 2018											*/
+/*	NOTES:			The following tables are established in this file:			*/
+/*					whaight.BHI_Pro_clm_hdr_clean								*/
+/*					whaight.BHI_Pro_clm_dtl_reduced								*/
+/*					whaight.BHI_Pro_clm_hdr_clean_icd10							*/
+/*					whaight.BHI_Pro_clm_hdr_reduced								*/
+/*					whaight.BHI_Pharm_clm_hdr									*/
+/*					whaight.BHI_Pharm_clm_dtl									*/
+/*					whaight.BHI_all_claims_1NF									*/
+/*																				*/
+/*	MODIFICATIONS																*/
+/*																				*/
+/*		1.	BY:																	*/
+/*			DATE:																*/
+/*			NOTES:																*/
+/*																				*/
+/********************************************************************************/
+
+
+
+/********************************************************************************/
+/*																				*/
+/*	The DROP &amp; CREATE below defines a table of BHI professional claims.  These 	*/
+/*	data were received in the table clean_raw.BHI_Professional_Claims.			*/
+/*																				*/
+/********************************************************************************/
+DROP TABLE IF EXISTS	whaight.BHI_Pro_clm_hdr_clean;
+CREATE TABLE			whaight.BHI_Pro_clm_hdr_clean							--	H	D
+(		claim_ID							VARCHAR( 12 )		ENCODE	ZSTD	--	*	*
+	,	member_ID							VARCHAR( 12 )		ENCODE	ZSTD	--	*	*
+	,	category_Of_Service_Code			VARCHAR(  3 )		ENCODE	ZSTD	--	*
+	,	place_Of_Service_Code				VARCHAR(  2 )		ENCODE	ZSTD	--	*
+	,	claim_Type_Code						VARCHAR(  2 )		ENCODE	ZSTD	--	*
+	,	first_Date_Of_Service				DATE				ENCODE	ZSTD	--	*
+	,	last_Date_Of_Service				DATE				ENCODE	ZSTD	--	*
+	,	primary_ICD9_DX_Code				VARCHAR(  7 )		ENCODE	ZSTD	--	*
+	,	secondary_ICD9_DX_Code1				VARCHAR(  7 )		ENCODE	ZSTD	--	*
+	,	secondary_ICD9_DX_Code2				VARCHAR(  7 )		ENCODE	ZSTD	--	*
+	,	secondary_ICD9_DX_Code3				VARCHAR(  7 )		ENCODE	ZSTD	--	*
+	,	billing_Provider_NPI				VARCHAR( 10 )		ENCODE	ZSTD	--	*
+	,	billing_Provider_Specialty_Code		VARCHAR(  2 )		ENCODE	ZSTD	--	*
+	,	billing_Provider_Zip_Code			VARCHAR(  5 )		ENCODE	ZSTD	--	*
+	,	billing_Provider_Medicare_ID		VARCHAR( 20 )		ENCODE	ZSTD	--	*
+	,	rendering_Provider_NPI				VARCHAR( 10 )		ENCODE	ZSTD	--	*
+	,	rendering_Provider_Specialty_Code	VARCHAR(  2 )		ENCODE	ZSTD	--	*
+	,	rendering_Provider_Type_Code		VARCHAR(  2 )		ENCODE	ZSTD	--	*
+	,	rendering_Provider_Zip_Code			VARCHAR(  5 )		ENCODE	ZSTD	--	*
+	,	ICD_Code_Type						VARCHAR(  1 )		ENCODE	ZSTD	--	*
+	,	primary_ICD10_DX_Code				VARCHAR(  8 )		ENCODE	ZSTD	--	*
+	,	secondary_ICD10_DX_Code1			VARCHAR(  8 )		ENCODE	ZSTD	--	*
+	,	secondary_ICD10_DX_Code2			VARCHAR(  8 )		ENCODE	ZSTD	--	*
+	,	secondary_ICD10_DX_Code3			VARCHAR(  8 )		ENCODE	ZSTD	--	*
+	,	claim_Payment_Status_Code			VARCHAR(  1 )		ENCODE	ZSTD	--	*
+	,	non_Covered_Reason_Code				VARCHAR(  2 )		ENCODE	ZSTD	--	*
+)
+DISTSTYLE KEY
+DISTKEY( member_ID )
+COMPOUND SORTKEY(
+		member_ID
+	,	claim_ID
+	,	rendering_Provider_NPI
+	,	primary_ICD9_DX_Code
+	,	first_Date_Of_Service
+	,	last_Date_Of_Service
+);
+
+
+
+/********************************************************************************/
+/*																				*/
+/*	The INSERT command populates the table defined ablove.  It reads the table	*/
+/*	clean_raw.BHI_Professional_Claims and removes from the ICD DX and procedure	*/
+/*	all non-alphanumeric characters.											*/
+/*																				*/
+/********************************************************************************/
+INSERT INTO	whaight.BHI_Pro_clm_hdr_clean
+(	SELECT
+			pro.claim_ID							::	VARCHAR( 12 )		AS	claim_ID
+		,	pro.member_ID							::	VARCHAR( 12 )		AS	member_ID
+		,	pro.category_Of_Service_Code			::	VARCHAR(  3 )		AS	category_Of_Service_Code
+		,	pro.place_Of_Service_Code				::	VARCHAR(  2 )		AS	place_Of_Service_Code
+		,	pro.claim_Type_Code						::	VARCHAR(  2 )		AS	claim_Type_Code
+		,	pro.first_Date_Of_Service				::	DATE				AS	first_Date_Of_Service
+		,	pro.last_Date_Of_Service				::	DATE				AS	last_Date_Of_Service
+		,	REGEXP_REPLACE( pro.primary_ICD9_DX_Code, '[^a-zA-Z0-9]+', '' )
+													::	VARCHAR(  7 )		AS	primary_ICD9_DX_Code
+		,	REGEXP_REPLACE( pro.secondary_ICD9_DX_Code1, '[^a-zA-Z0-9]+', '' )
+													::	VARCHAR(  7 )		AS	secondary_ICD9_DX_Code1
+		,	REGEXP_REPLACE( pro.secondary_ICD9_DX_Code2, '[^a-zA-Z0-9]+', '' )
+													::	VARCHAR(  7 )		AS	secondary_ICD9_DX_Code2
+		,	REGEXP_REPLACE( pro.secondary_ICD9_DX_Code3, '[^a-zA-Z0-9]+', '' )
+													::	VARCHAR(  7 )		AS	secondary_ICD9_DX_Code3
+		,	pro.billing_Provider_NPI				::	VARCHAR( 10 )		AS	billing_Provider_NPI
+		,	pro.billing_Provider_Specialty_Code		::	VARCHAR(  2 )		AS	billing_Provider_Specialty_Code
+		,	pro.billing_Provider_Zip_Code			::	VARCHAR(  5 )		AS	billing_Provider_Zip_Code
+		,	pro.billing_Provider_Medicare_ID		::	VARCHAR( 20 )		AS	billing_Provider_Medicare_ID
+		,	pro.rendering_Provider_NPI				::	VARCHAR( 10 )		AS	rendering_Provider_NPI
+		,	pro.rendering_Provider_Specialty_Code	::	VARCHAR(  2 )		AS	rendering_Provider_Specialty_Code
+		,	pro.rendering_Provider_Type_Code		::	VARCHAR(  2 )		AS	rendering_Provider_Type_Code
+		,	pro.rendering_Provider_Zip_Code			::	VARCHAR(  5 )		AS	rendering_Provider_Zip_Code
+		,	pro.ICD_Code_Type						::	VARCHAR(  1 )		AS	ICD_Code_Type
+		,	REGEXP_REPLACE( pro.primary_ICD10_DX_Code, '[^a-zA-Z0-9]+', '' )
+													::	VARCHAR(  8 )		AS	primary_ICD10_DX_Code
+		,	REGEXP_REPLACE( pro.secondary_ICD10_DX_Code1, '[^a-zA-Z0-9]+', '' )
+													::	VARCHAR(  8 )		AS	secondary_ICD10_DX_Code1
+		,	REGEXP_REPLACE( pro.secondary_ICD10_DX_Code2, '[^a-zA-Z0-9]+', '' )
+													::	VARCHAR(  8 )		AS	secondary_ICD10_DX_Code2
+		,	REGEXP_REPLACE( pro.secondary_ICD10_DX_Code3, '[^a-zA-Z0-9]+', '' )
+													::	VARCHAR(  8 )		AS	secondary_ICD10_DX_Code3
+		,	pro.claim_Payment_Status_Code			::	VARCHAR(  1 )		AS	claim_Payment_Status_Code
+		,	pro.non_Covered_Reason_Code				::	VARCHAR(  2 )		AS	non_Covered_Reason_Code
+	FROM
+		clean_raw.BHI_Professional_Claims		pro
+);
+ANALYZE COMPRESSION	whaight.BHI_Pro_clm_hdr_clean;
+ANALYZE				whaight.BHI_Pro_clm_hdr_clean;
+VACUUM SORT ONLY	whaight.BHI_Pro_clm_hdr_clean;
+ANALYZE				whaight.BHI_Pro_clm_hdr_clean;
+
+
+</SQL>
+    <Name>BHI_ED_Normalized</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <File>../Current%20Code/BHI%20Normalization/BHI_ED_common_info.sql</File>
+    <Name>BHI_ED_common_info</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <File>../Current%20Code/BHI%20Normalization/BHI_Normalization-OLD.sql</File>
+    <Name>BHI_Normalization-OLD</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <File>../../BHI%20code/BHI_GEM_xwalks.sql</File>
+    <Name>BHI_GEM_xwalks</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <File>../Current%20Code/BHI%20Normalization/BHI_ED_claims_flat.sql</File>
+    <Name>BHI_ED_claims_flat</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <SQL>CREATE TABLE			whaight.BHI_Pro_clm_hdr_clean							--	H	D
+(		claim_ID							VARCHAR( 12 )		ENCODE	ZSTD	--	*	*
+	,	member_ID							VARCHAR( 12 )		ENCODE	ZSTD	--	*	*
+	,	category_Of_Service_Code			VARCHAR(  3 )		ENCODE	ZSTD	--	*
+	,	place_Of_Service_Code				VARCHAR(  2 )		ENCODE	ZSTD	--	*
+	,	claim_Type_Code						VARCHAR(  2 )		ENCODE	ZSTD	--	*
+	,	first_Date_Of_Service				DATE				ENCODE	ZSTD	--	*
+	,	last_Date_Of_Service				DATE				ENCODE	ZSTD	--	*
+	,	primary_ICD9_DX_Code				VARCHAR(  7 )		ENCODE	ZSTD	--	*
+	,	secondary_ICD9_DX_Code1				VARCHAR(  7 )		ENCODE	ZSTD	--	*
+	,	secondary_ICD9_DX_Code2				VARCHAR(  7 )		ENCODE	ZSTD	--	*
+	,	secondary_ICD9_DX_Code3				VARCHAR(  7 )		ENCODE	ZSTD	--	*
+	,	billing_Provider_NPI				VARCHAR( 10 )		ENCODE	ZSTD	--	*
+	,	billing_Provider_Specialty_Code		VARCHAR(  2 )		ENCODE	ZSTD	--	*
+	,	billing_Provider_Zip_Code			VARCHAR(  5 )		ENCODE	ZSTD	--	*
+	,	billing_Provider_Medicare_ID		VARCHAR( 20 )		ENCODE	ZSTD	--	*
+	,	rendering_Provider_NPI				VARCHAR( 10 )		ENCODE	ZSTD	--	*
+	,	rendering_Provider_Specialty_Code	VARCHAR(  2 )		ENCODE	ZSTD	--	*
+	,	rendering_Provider_Type_Code		VARCHAR(  2 )		ENCODE	ZSTD	--	*
+	,	rendering_Provider_Zip_Code			VARCHAR(  5 )		ENCODE	ZSTD	--	*
+	,	ICD_Code_Type						VARCHAR(  1 )		ENCODE	ZSTD	--	*
+	,	primary_ICD10_DX_Code				VARCHAR(  8 )		ENCODE	ZSTD	--	*
+	,	secondary_ICD10_DX_Code1			VARCHAR(  8 )		ENCODE	ZSTD	--	*
+	,	secondary_ICD10_DX_Code2			VARCHAR(  8 )		ENCODE	ZSTD	--	*
+	,	secondary_ICD10_DX_Code3			VARCHAR(  8 )		ENCODE	ZSTD	--	*
+	,	claim_Payment_Status_Code			VARCHAR(  1 )		ENCODE	ZSTD	--	*
+	,	non_Covered_Reason_Code				VARCHAR(  2 )		ENCODE	ZSTD	--	*
+)
+DISTSTYLE KEY
+DISTKEY( member_ID )
+COMPOUND SORTKEY(
+		member_ID
+	,	claim_ID
+	,	rendering_Provider_NPI
+	,	primary_ICD9_DX_Code
+	,	first_Date_Of_Service
+	,	last_Date_Of_Service
+);
+
+
+CREATE TABLE			whaight.BHI_Pro_Clm_Dtl_reduced
+(		claim_ID				VARCHAR( 12 )		ENCODE	ZSTD	--	*	*
+	,	claim_Line_Num			INTEGER				ENCODE	ZSTD	--		*
+	,	member_ID				VARCHAR( 12 )		ENCODE	ZSTD	--	*	*
+	,	CPT_HCPCS_Code			VARCHAR(  6 )		ENCODE	ZSTD	--		*
+	,	CPT_Modifier_Code		VARCHAR(  2 )		ENCODE	ZSTD	--		*
+	,	number_Of_Units			NUMERIC( 10, 3 )	ENCODE	ZSTD	--		*
+	,	type_Of_Service_Code	VARCHAR(  5 )		ENCODE	ZSTD	--		*
+	,	TCRRV_Amount			NUMERIC( 10, 2 )	ENCODE	ZSTD	--		*
+)
+DISTSTYLE KEY
+DISTKEY( member_ID )
+COMPOUND SORTKEY(
+		member_ID
+	,	claim_ID
+	,	claim_Line_Num
+	,	CPT_HCPCS_Code
+);
+
+
+WHERE	icd10_DX_code = ANY(			SELECT	admitting_ICD10_DX_Code
+										FROM	whaight.BHI_claims_ICD_Codes
+								UNION	SELECT	primary_ICD10_DX_Code
+										FROM	whaight.BHI_claims_ICD_Codes	
+								UNION	SELECT	secondary_ICD10_DX_Code1
+										FROM	whaight.BHI_claims_ICD_Codes	
+								UNION	SELECT	secondary_ICD10_DX_Code2
+										FROM	whaight.BHI_claims_ICD_Codes	
+								UNION	SELECT	secondary_ICD10_DX_Code3
+										FROM	whaight.BHI_claims_ICD_Codes	
+								UNION	SELECT	secondary_ICD10_DX_Code4
+										FROM	whaight.BHI_claims_ICD_Codes	
+								UNION	SELECT	secondary_ICD10_DX_Code5
+										FROM	whaight.BHI_claims_ICD_Codes	
+								UNION	SELECT	secondary_ICD10_DX_Code6
+										FROM	whaight.BHI_claims_ICD_Codes	
+								UNION	SELECT	secondary_ICD10_DX_Code7
+										FROM	whaight.BHI_claims_ICD_Codes	
+								UNION	SELECT	secondary_ICD10_DX_Code8
+										FROM	whaight.BHI_claims_ICD_Codes	
+								UNION	SELECT	secondary_ICD10_DX_Code9
+										FROM	whaight.BHI_claims_ICD_Codes	
+								UNION	SELECT	secondary_ICD10_DX_Code10
+										FROM	whaight.BHI_claims_ICD_Codes	)
+
+
+
+DROP TABLE IF EXISTS	whaight.BHI_ICD10_DX_code_frequencies_p;
+CREATE TABLE			whaight.BHI_ICD10_DX_code_frequencies_p
+(		icd10_DX_code	VARCHAR( 8 )	ENCODE	RAW
+	,	frequency		INTEGER			ENCODE	RAW
+)
+DISTSTYLE KEY
+DISTKEY( icd10_DX_code )
+COMPOUND SORTKEY( icd10_DX_code );
+
+
+
+INSERT INTO	whaight.BHI_ICD10_DX_code_frequencies_p
+(	SELECT DISTINCT		codes.icd10_DX_code			::	VARCHAR( 8 )	AS	icd10_DX_code
+					,	COUNT( claims.claim_ID )	::	INTEGER			AS	frequency
+	FROM				whaight.BHI_master_list_of_claims					claims
+			JOIN		whaight.BHI_claims_ICD_codes						dat
+			ON				claims.claim_ID		=	dat.claim_ID
+						AND	claims.member_ID	=	dat.member_ID
+					,	whaight.BHI_master_list_of_ICD10_DX_codes_in_claims	codes
+	WHERE	codes.icd10_DX_code	=	dat.primary_ICD10_DX_Code
+--			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code1
+--			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code2
+--			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code3
+--			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code4
+--			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code5
+--			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code6
+--			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code7
+--			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code8
+--			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code9
+--			OR		codes.icd10_DX_code	=	dat.secondary_ICD10_DX_Code10
+	GROUP BY	icd10_DX_code
+);
+--ANALYZE COMPRESSION	whaight.BHI_ICD10_DX_code_frequencies_p;
+ANALYZE				whaight.BHI_ICD10_DX_code_frequencies_p;
+VACUUM SORT ONLY	whaight.BHI_ICD10_DX_code_frequencies_p;
+ANALYZE				whaight.BHI_ICD10_DX_code_frequencies_p;
+
+
+
+DROP TABLE IF EXISTS	whaight.BHI_ICD10_DX_code_frequencies_a;
+CREATE TABLE			whaight.BHI_ICD10_DX_code_frequencies_a
+(		icd10_DX_code	VARCHAR( 8 )	ENCODE	RAW
+	,	frequency		INTEGER			ENCODE	RAW
+)
+DISTSTYLE KEY
+DISTKEY( icd10_DX_code )
+COMPOUND SORTKEY( icd10_DX_code );
+
+
+
+INSERT INTO	whaight.BHI_ICD10_DX_code_frequencies_a
+(	SELECT DISTINCT		codes.icd10_DX_code			::	VARCHAR( 8 )	AS	icd10_DX_code
+					,	COUNT( claims.claim_ID )	::	INTEGER			AS	frequency
+	FROM				whaight.BHI_master_list_of_claims					claims
+			JOIN		whaight.BHI_claims_ICD_codes						dat
+			ON				claims.claim_ID		=	dat.claim_ID
+						AND	claims.member_ID	=	dat.member_ID
+					,	whaight.BHI_master_list_of_ICD10_DX_codes_in_claims	codes
+	WHERE	codes.icd10_DX_code	=	dat.admitting_ICD10_DX_Code
+	GROUP BY	icd10_DX_code
+);
+--ANALYZE COMPRESSION	whaight.BHI_ICD10_DX_code_frequencies_a;
+ANALYZE				whaight.BHI_ICD10_DX_code_frequencies_a;
+VACUUM SORT ONLY	whaight.BHI_ICD10_DX_code_frequencies_a;
+ANALYZE				whaight.BHI_ICD10_DX_code_frequencies_a;
+
+
+
+DROP TABLE IF EXISTS	whaight.BHI_ICD10_DX_code_frequencies;
+CREATE TABLE			whaight.BHI_ICD10_DX_code_frequencies
+(		icd10_DX_code	VARCHAR( 8 )	ENCODE	RAW
+	,	frequency		INTEGER			ENCODE	RAW
+)
+DISTSTYLE KEY
+DISTKEY( icd10_DX_code )
+COMPOUND SORTKEY( icd10_DX_code );
+
+
+
+INSERT INTO	whaight.BHI_ICD10_DX_code_frequencies
+(	SELECT DISTINCT		codes.icd10_DX_code			::	VARCHAR( 8 )	AS	icd10_DX_code
+					,	p.frequency + a.frequency	::	INTEGER			AS	frequency
+	FROM			whaight.BHI_claims_ICD_codes			codes
+			JOIN	whaight.BHI_ICD10_DX_code_frequencies_p	p
+			ON		codes.icd10_DX_code	=	p.icd10_DX_code
+			JOIN	whaight.BHI_ICD10_DX_code_frequencies_a	a
+			ON		codes.icd10_DX_code	=	a.icd10_DX_code
+);
+--ANALYZE COMPRESSION	whaight.BHI_ICD10_DX_code_frequencies;
+ANALYZE				whaight.BHI_ICD10_DX_code_frequencies;
+VACUUM SORT ONLY	whaight.BHI_ICD10_DX_code_frequencies;
+ANALYZE				whaight.BHI_ICD10_DX_code_frequencies;
+
+
+
+SELECT	*	FROM	whaight.BHI_ICD10_DX_code_frequencies_dummy	LIMIT	1000;
+</SQL>
+    <Name>Tab 7</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <SQL>/********************************************************************************/
+/*																				*/
+/*	FILE:			BHI_ref_taxes.sql											*/
+/*	PROGRAMMED BY:	Will Haight (wthii)											*/
+/*	DATE:			February, 2019												*/
+/*	NOTES:			The following tables are established in this file:			*/
+/*					whaight.BHI_ref_taxes_st.sql								*/
+/*																				*/
+/*	MODIFICATIONS																*/
+/*																				*/
+/*		1.	BY:		wthii														*/
+/*			DATE:	2/18/2019													*/
+/*			NOTES:	Initial table establishment									*/
+/*																				*/
+/********************************************************************************/
+
+
+
+/********************************************************************************/
+/*																				*/
+/*	The DROP &amp; CREATE below define the table for receiving the data from		*/
+/*	http://www.irs.gov															*/
+/*																				*/
+/********************************************************************************/
+DROP TABLE IF EXISTS	whaight.BHI_ref_taxes_st_raw;
+CREATE TABLE			whaight.BHI_ref_taxes_st_raw
+(		state			VARCHAR(  2 )	ENCODE	RAW
+	,	agi_stub		VARCHAR(  2 )	ENCODE	RAW
+	,	n1				VARCHAR( 16 )	ENCODE	RAW
+	,	mars1			VARCHAR( 16 )	ENCODE	RAW
+	,	mars2			VARCHAR( 16 )	ENCODE	RAW
+	,	mars4			VARCHAR( 16 )	ENCODE	RAW
+	,	prep			VARCHAR( 16 )	ENCODE	RAW
+	,	n2				VARCHAR( 16 )	ENCODE	RAW
+	,	num_dep			VARCHAR( 16 )	ENCODE	RAW
+	,	total_vita		VARCHAR( 16 )	ENCODE	RAW
+	,	vita			VARCHAR( 16 )	ENCODE	RAW
+	,	mvita			VARCHAR( 16 )	ENCODE	RAW
+	,	tce				VARCHAR( 16 )	ENCODE	RAW
+	,	vita_eic		VARCHAR( 16 )	ENCODE	RAW
+	,	ral				VARCHAR( 16 )	ENCODE	RAW
+	,	rac				VARCHAR( 16 )	ENCODE	RAW
+	,	elderly			VARCHAR( 16 )	ENCODE	RAW
+	,	a00100			VARCHAR( 16 )	ENCODE	RAW
+	,	n02650			VARCHAR( 16 )	ENCODE	RAW
+	,	a02650			VARCHAR( 16 )	ENCODE	RAW
+	,	n00200			VARCHAR( 16 )	ENCODE	RAW
+	,	a00200			VARCHAR( 16 )	ENCODE	RAW
+	,	n00300			VARCHAR( 16 )	ENCODE	RAW
+	,	a00300			VARCHAR( 16 )	ENCODE	RAW
+	,	n00600			VARCHAR( 16 )	ENCODE	RAW
+	,	a00600			VARCHAR( 16 )	ENCODE	RAW
+	,	n00650			VARCHAR( 16 )	ENCODE	RAW
+	,	a00650			VARCHAR( 16 )	ENCODE	RAW
+	,	n00700			VARCHAR( 16 )	ENCODE	RAW
+	,	a00700			VARCHAR( 16 )	ENCODE	RAW
+	,	n00900			VARCHAR( 16 )	ENCODE	RAW
+	,	a00900			VARCHAR( 16 )	ENCODE	RAW
+	,	n01000			VARCHAR( 16 )	ENCODE	RAW
+	,	a01000			VARCHAR( 16 )	ENCODE	RAW
+	,	n01400			VARCHAR( 16 )	ENCODE	RAW
+	,	a01400			VARCHAR( 16 )	ENCODE	RAW
+	,	n01700			VARCHAR( 16 )	ENCODE	RAW
+	,	a01700			VARCHAR( 16 )	ENCODE	RAW
+	,	schf			VARCHAR( 16 )	ENCODE	RAW
+	,	n02300			VARCHAR( 16 )	ENCODE	RAW
+	,	a02300			VARCHAR( 16 )	ENCODE	RAW
+	,	n02500			VARCHAR( 16 )	ENCODE	RAW
+	,	a02500			VARCHAR( 16 )	ENCODE	RAW
+	,	n26270			VARCHAR( 16 )	ENCODE	RAW
+	,	a26270			VARCHAR( 16 )	ENCODE	RAW
+	,	n02900			VARCHAR( 16 )	ENCODE	RAW
+	,	a02900			VARCHAR( 16 )	ENCODE	RAW
+	,	n03220			VARCHAR( 16 )	ENCODE	RAW
+	,	a03220			VARCHAR( 16 )	ENCODE	RAW
+	,	n03300			VARCHAR( 16 )	ENCODE	RAW
+	,	a03300			VARCHAR( 16 )	ENCODE	RAW
+	,	n03270			VARCHAR( 16 )	ENCODE	RAW
+	,	a03270			VARCHAR( 16 )	ENCODE	RAW
+	,	n03150			VARCHAR( 16 )	ENCODE	RAW
+	,	a03150			VARCHAR( 16 )	ENCODE	RAW
+	,	n03210			VARCHAR( 16 )	ENCODE	RAW
+	,	a03210			VARCHAR( 16 )	ENCODE	RAW
+	,	n03230			VARCHAR( 16 )	ENCODE	RAW
+	,	a03230			VARCHAR( 16 )	ENCODE	RAW
+	,	n03240			VARCHAR( 16 )	ENCODE	RAW
+	,	a03240			VARCHAR( 16 )	ENCODE	RAW
+	,	n04470			VARCHAR( 16 )	ENCODE	RAW
+	,	a04470			VARCHAR( 16 )	ENCODE	RAW
+	,	n17000			VARCHAR( 16 )	ENCODE	RAW
+	,	a17000			VARCHAR( 16 )	ENCODE	RAW
+	,	n18425			VARCHAR( 16 )	ENCODE	RAW
+	,	a18425			VARCHAR( 16 )	ENCODE	RAW
+	,	n18450			VARCHAR( 16 )	ENCODE	RAW
+	,	a18450			VARCHAR( 16 )	ENCODE	RAW
+	,	n18500			VARCHAR( 16 )	ENCODE	RAW
+	,	a18500			VARCHAR( 16 )	ENCODE	RAW
+	,	n18300			VARCHAR( 16 )	ENCODE	RAW
+	,	a18300			VARCHAR( 16 )	ENCODE	RAW
+	,	n18800			VARCHAR( 16 )	ENCODE	RAW
+	,	a18800			VARCHAR( 16 )	ENCODE	RAW
+	,	n19300			VARCHAR( 16 )	ENCODE	RAW
+	,	a19300			VARCHAR( 16 )	ENCODE	RAW
+	,	n19500			VARCHAR( 16 )	ENCODE	RAW
+	,	a19500			VARCHAR( 16 )	ENCODE	RAW
+	,	n19530			VARCHAR( 16 )	ENCODE	RAW
+	,	a19530			VARCHAR( 16 )	ENCODE	RAW
+	,	n19550			VARCHAR( 16 )	ENCODE	RAW
+	,	a19550			VARCHAR( 16 )	ENCODE	RAW
+	,	n19570			VARCHAR( 16 )	ENCODE	RAW
+	,	a19570			VARCHAR( 16 )	ENCODE	RAW
+	,	n19700			VARCHAR( 16 )	ENCODE	RAW
+	,	a19700			VARCHAR( 16 )	ENCODE	RAW
+	,	n20800			VARCHAR( 16 )	ENCODE	RAW
+	,	a20800			VARCHAR( 16 )	ENCODE	RAW
+	,	n21020			VARCHAR( 16 )	ENCODE	RAW
+	,	a21020			VARCHAR( 16 )	ENCODE	RAW
+	,	n04800			VARCHAR( 16 )	ENCODE	RAW
+	,	a04800			VARCHAR( 16 )	ENCODE	RAW
+	,	n05800			VARCHAR( 16 )	ENCODE	RAW
+	,	a05800			VARCHAR( 16 )	ENCODE	RAW
+	,	n09600			VARCHAR( 16 )	ENCODE	RAW
+	,	a09600			VARCHAR( 16 )	ENCODE	RAW
+	,	n05780			VARCHAR( 16 )	ENCODE	RAW
+	,	a05780			VARCHAR( 16 )	ENCODE	RAW
+	,	n07100			VARCHAR( 16 )	ENCODE	RAW
+	,	a07100			VARCHAR( 16 )	ENCODE	RAW
+	,	n07300			VARCHAR( 16 )	ENCODE	RAW
+	,	a07300			VARCHAR( 16 )	ENCODE	RAW
+	,	n07180			VARCHAR( 16 )	ENCODE	RAW
+	,	a07180			VARCHAR( 16 )	ENCODE	RAW
+	,	n07230			VARCHAR( 16 )	ENCODE	RAW
+	,	a07230			VARCHAR( 16 )	ENCODE	RAW
+	,	n07240			VARCHAR( 16 )	ENCODE	RAW
+	,	a07240			VARCHAR( 16 )	ENCODE	RAW
+	,	n07220			VARCHAR( 16 )	ENCODE	RAW
+	,	a07220			VARCHAR( 16 )	ENCODE	RAW
+	,	n07260			VARCHAR( 16 )	ENCODE	RAW
+	,	a07260			VARCHAR( 16 )	ENCODE	RAW
+	,	n09400			VARCHAR( 16 )	ENCODE	RAW
+	,	a09400			VARCHAR( 16 )	ENCODE	RAW
+	,	n85770			VARCHAR( 16 )	ENCODE	RAW
+	,	a85770			VARCHAR( 16 )	ENCODE	RAW
+	,	n85775			VARCHAR( 16 )	ENCODE	RAW
+	,	a85775			VARCHAR( 16 )	ENCODE	RAW
+	,	n09750			VARCHAR( 16 )	ENCODE	RAW
+	,	a09750			VARCHAR( 16 )	ENCODE	RAW
+	,	n10600			VARCHAR( 16 )	ENCODE	RAW
+	,	a10600			VARCHAR( 16 )	ENCODE	RAW
+	,	n59660			VARCHAR( 16 )	ENCODE	RAW
+	,	a59660			VARCHAR( 16 )	ENCODE	RAW
+	,	n59720			VARCHAR( 16 )	ENCODE	RAW
+	,	a59720			VARCHAR( 16 )	ENCODE	RAW
+	,	n11070			VARCHAR( 16 )	ENCODE	RAW
+	,	a11070			VARCHAR( 16 )	ENCODE	RAW
+	,	n10960			VARCHAR( 16 )	ENCODE	RAW
+	,	a10960			VARCHAR( 16 )	ENCODE	RAW
+	,	n11560			VARCHAR( 16 )	ENCODE	RAW
+	,	a11560			VARCHAR( 16 )	ENCODE	RAW
+	,	n06500			VARCHAR( 16 )	ENCODE	RAW
+	,	a06500			VARCHAR( 16 )	ENCODE	RAW
+	,	n10300			VARCHAR( 16 )	ENCODE	RAW
+	,	a10300			VARCHAR( 16 )	ENCODE	RAW
+	,	n85530			VARCHAR( 16 )	ENCODE	RAW
+	,	a85530			VARCHAR( 16 )	ENCODE	RAW
+	,	n85300			VARCHAR( 16 )	ENCODE	RAW
+	,	a85300			VARCHAR( 16 )	ENCODE	RAW
+	,	n11901			VARCHAR( 16 )	ENCODE	RAW
+	,	a11901			VARCHAR( 16 )	ENCODE	RAW
+	,	n11902			VARCHAR( 16 )	ENCODE	RAW
+	,	a11902			VARCHAR( 16 )	ENCODE	RAW
+)
+COMPOUND SORTKEY(
+		state
+	,	agi_stub
+);
+
+
+
+/********************************************************************************/
+/*																				*/
+/*	This command copies raw data from an S3 bucket at amazon into the table		*/
+/*	whaight.BHI_ref_taxes.  													*/
+/*																				*/
+/********************************************************************************/
+COPY		whaight.BHI_ref_taxes_st_raw
+FROM		's3://dhp-randlab-s3/users/whaight/16in54cmcsv.txt'
+credentials 'aws_iam_role=arn:aws:iam::722648170004:role/Data_Wranglers'
+ACCEPTANYDATE ACCEPTINVCHARS '^' BLANKSASNULL EMPTYASNULL NULL AS 'NULL' IGNOREBLANKLINES DATEFORMAT 'auto'
+IGNOREHEADER 1 TRIMBLANKS DELIMITER '\t' STATUPDATE ON MAXERROR 0 COMPUPDATE ON;
+
+--select	* from	stl_load_errors	order by starttime desc;
+
+--ANALYZE COMPRESSION	whaight.BHI_ref_taxes_st_raw;
+ANALYZE				whaight.BHI_ref_taxes_st_raw;
+VACUUM SORT ONLY	whaight.BHI_ref_taxes_st_raw;
+ANALYZE				whaight.BHI_ref_taxes_st_raw;
+
+
+
+DROP TABLE IF EXISTS	whaight.BHI_ref_taxes_st;
+CREATE TABLE			whaight.BHI_ref_taxes_st
+(		state			VARCHAR(  2 )	ENCODE	RAW	
+	,	agi_stub		VARCHAR(  2 )	ENCODE	RAW		
+	,	n1				BIGINT			ENCODE	RAW
+	,	mars1			BIGINT			ENCODE	RAW	
+	,	mars2			BIGINT			ENCODE	RAW	
+	,	mars4			BIGINT			ENCODE	RAW	
+	,	prep			BIGINT			ENCODE	RAW	
+	,	n2				BIGINT			ENCODE	RAW
+	,	num_dep			BIGINT			ENCODE	RAW	
+	,	total_vita		BIGINT			ENCODE	RAW		
+	,	vita			BIGINT			ENCODE	RAW	
+	,	mvita			BIGINT			ENCODE	RAW	
+	,	tce				BIGINT			ENCODE	RAW
+	,	vita_eic		BIGINT			ENCODE	RAW		
+	,	ral				BIGINT			ENCODE	RAW
+	,	rac				BIGINT			ENCODE	RAW
+	,	elderly			BIGINT			ENCODE	RAW	
+	,	a00100			BIGINT			ENCODE	RAW	
+	,	n02650			BIGINT			ENCODE	RAW	
+	,	a02650			BIGINT			ENCODE	RAW	
+	,	n00200			BIGINT			ENCODE	RAW	
+	,	a00200			BIGINT			ENCODE	RAW	
+	,	n00300			BIGINT			ENCODE	RAW	
+	,	a00300			BIGINT			ENCODE	RAW	
+	,	n00600			BIGINT			ENCODE	RAW	
+	,	a00600			BIGINT			ENCODE	RAW	
+	,	n00650			BIGINT			ENCODE	RAW	
+	,	a00650			BIGINT			ENCODE	RAW	
+	,	n00700			BIGINT			ENCODE	RAW	
+	,	a00700			BIGINT			ENCODE	RAW	
+	,	n00900			BIGINT			ENCODE	RAW	
+	,	a00900			BIGINT			ENCODE	RAW	
+	,	n01000			BIGINT			ENCODE	RAW	
+	,	a01000			BIGINT			ENCODE	RAW	
+	,	n01400			BIGINT			ENCODE	RAW	
+	,	a01400			BIGINT			ENCODE	RAW	
+	,	n01700			BIGINT			ENCODE	RAW	
+	,	a01700			BIGINT			ENCODE	RAW	
+	,	schf			BIGINT			ENCODE	RAW	
+	,	n02300			BIGINT			ENCODE	RAW	
+	,	a02300			BIGINT			ENCODE	RAW	
+	,	n02500			BIGINT			ENCODE	RAW	
+	,	a02500			BIGINT			ENCODE	RAW	
+	,	n26270			BIGINT			ENCODE	RAW	
+	,	a26270			BIGINT			ENCODE	RAW	
+	,	n02900			BIGINT			ENCODE	RAW	
+	,	a02900			BIGINT			ENCODE	RAW	
+	,	n03220			BIGINT			ENCODE	RAW	
+	,	a03220			BIGINT			ENCODE	RAW	
+	,	n03300			BIGINT			ENCODE	RAW	
+	,	a03300			BIGINT			ENCODE	RAW	
+	,	n03270			BIGINT			ENCODE	RAW	
+	,	a03270			BIGINT			ENCODE	RAW	
+	,	n03150			BIGINT			ENCODE	RAW	
+	,	a03150			BIGINT			ENCODE	RAW	
+	,	n03210			BIGINT			ENCODE	RAW	
+	,	a03210			BIGINT			ENCODE	RAW	
+	,	n03230			BIGINT			ENCODE	RAW	
+	,	a03230			BIGINT			ENCODE	RAW	
+	,	n03240			BIGINT			ENCODE	RAW	
+	,	a03240			BIGINT			ENCODE	RAW	
+	,	n04470			BIGINT			ENCODE	RAW	
+	,	a04470			BIGINT			ENCODE	RAW	
+	,	n17000			BIGINT			ENCODE	RAW	
+	,	a17000			BIGINT			ENCODE	RAW	
+	,	n18425			BIGINT			ENCODE	RAW	
+	,	a18425			BIGINT			ENCODE	RAW	
+	,	n18450			BIGINT			ENCODE	RAW	
+	,	a18450			BIGINT			ENCODE	RAW	
+	,	n18500			BIGINT			ENCODE	RAW	
+	,	a18500			BIGINT			ENCODE	RAW	
+	,	n18300			BIGINT			ENCODE	RAW	
+	,	a18300			BIGINT			ENCODE	RAW	
+	,	n18800			BIGINT			ENCODE	RAW	
+	,	a18800			BIGINT			ENCODE	RAW	
+	,	n19300			BIGINT			ENCODE	RAW	
+	,	a19300			BIGINT			ENCODE	RAW	
+	,	n19500			BIGINT			ENCODE	RAW	
+	,	a19500			BIGINT			ENCODE	RAW	
+	,	n19530			BIGINT			ENCODE	RAW	
+	,	a19530			BIGINT			ENCODE	RAW	
+	,	n19550			BIGINT			ENCODE	RAW	
+	,	a19550			BIGINT			ENCODE	RAW	
+	,	n19570			BIGINT			ENCODE	RAW	
+	,	a19570			BIGINT			ENCODE	RAW	
+	,	n19700			BIGINT			ENCODE	RAW	
+	,	a19700			BIGINT			ENCODE	RAW	
+	,	n20800			BIGINT			ENCODE	RAW	
+	,	a20800			BIGINT			ENCODE	RAW	
+	,	n21020			BIGINT			ENCODE	RAW	
+	,	a21020			BIGINT			ENCODE	RAW	
+	,	n04800			BIGINT			ENCODE	RAW	
+	,	a04800			BIGINT			ENCODE	RAW	
+	,	n05800			BIGINT			ENCODE	RAW	
+	,	a05800			BIGINT			ENCODE	RAW	
+	,	n09600			BIGINT			ENCODE	RAW	
+	,	a09600			BIGINT			ENCODE	RAW	
+	,	n05780			BIGINT			ENCODE	RAW	
+	,	a05780			BIGINT			ENCODE	RAW	
+	,	n07100			BIGINT			ENCODE	RAW	
+	,	a07100			BIGINT			ENCODE	RAW	
+	,	n07300			BIGINT			ENCODE	RAW	
+	,	a07300			BIGINT			ENCODE	RAW	
+	,	n07180			BIGINT			ENCODE	RAW	
+	,	a07180			BIGINT			ENCODE	RAW	
+	,	n07230			BIGINT			ENCODE	RAW	
+	,	a07230			BIGINT			ENCODE	RAW	
+	,	n07240			BIGINT			ENCODE	RAW	
+	,	a07240			BIGINT			ENCODE	RAW	
+	,	n07220			BIGINT			ENCODE	RAW	
+	,	a07220			BIGINT			ENCODE	RAW	
+	,	n07260			BIGINT			ENCODE	RAW	
+	,	a07260			BIGINT			ENCODE	RAW	
+	,	n09400			BIGINT			ENCODE	RAW	
+	,	a09400			BIGINT			ENCODE	RAW	
+	,	n85770			BIGINT			ENCODE	RAW	
+	,	a85770			BIGINT			ENCODE	RAW	
+	,	n85775			BIGINT			ENCODE	RAW	
+	,	a85775			BIGINT			ENCODE	RAW	
+	,	n09750			BIGINT			ENCODE	RAW	
+	,	a09750			BIGINT			ENCODE	RAW	
+	,	n10600			BIGINT			ENCODE	RAW	
+	,	a10600			BIGINT			ENCODE	RAW	
+	,	n59660			BIGINT			ENCODE	RAW	
+	,	a59660			BIGINT			ENCODE	RAW	
+	,	n59720			BIGINT			ENCODE	RAW	
+	,	a59720			BIGINT			ENCODE	RAW	
+	,	n11070			BIGINT			ENCODE	RAW	
+	,	a11070			BIGINT			ENCODE	RAW	
+	,	n10960			BIGINT			ENCODE	RAW	
+	,	a10960			BIGINT			ENCODE	RAW	
+	,	n11560			BIGINT			ENCODE	RAW	
+	,	a11560			BIGINT			ENCODE	RAW	
+	,	n06500			BIGINT			ENCODE	RAW	
+	,	a06500			BIGINT			ENCODE	RAW	
+	,	n10300			BIGINT			ENCODE	RAW	
+	,	a10300			BIGINT			ENCODE	RAW	
+	,	n85530			BIGINT			ENCODE	RAW	
+	,	a85530			BIGINT			ENCODE	RAW	
+	,	n85300			BIGINT			ENCODE	RAW	
+	,	a85300			BIGINT			ENCODE	RAW	
+	,	n11901			BIGINT			ENCODE	RAW	
+	,	a11901			BIGINT			ENCODE	RAW	
+	,	n11902			BIGINT			ENCODE	RAW	
+	,	a11902			BIGINT			ENCODE	RAW	
+)
+COMPOUND SORTKEY(
+		state
+	,	agi_stub
+);
+
+
+
+
+INSERT INTO	whaight.BHI_ref_taxes_st
+(	SELECT
+			state				
+		,	agi_stub				
+		,	REGEXP_REPLACE( n1        , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( mars1     , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( mars2     , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( mars4     , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( prep      , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n2        , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( num_dep   , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( total_vita, '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( vita      , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( mvita     , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( tce       , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( vita_eic  , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( ral       , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( rac       , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( elderly   , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a00100    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n02650    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a02650    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n00200    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a00200    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n00300    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a00300    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n00600    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a00600    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n00650    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a00650    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n00700    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a00700    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n00900    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a00900    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n01000    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a01000    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n01400    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a01400    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n01700    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a01700    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( schf      , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n02300    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a02300    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n02500    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a02500    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n26270    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a26270    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n02900    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a02900    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n03220    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a03220    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n03300    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a03300    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n03270    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a03270    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n03150    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a03150    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n03210    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a03210    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n03230    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a03230    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n03240    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a03240    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n04470    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a04470    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n17000    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a17000    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n18425    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a18425    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n18450    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a18450    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n18500    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a18500    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n18300    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a18300    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n18800    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a18800    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n19300    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a19300    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n19500    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a19500    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n19530    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a19530    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n19550    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a19550    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n19570    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a19570    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n19700    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a19700    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n20800    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a20800    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n21020    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a21020    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n04800    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a04800    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n05800    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a05800    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n09600    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a09600    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n05780    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a05780    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n07100    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a07100    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n07300    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a07300    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n07180    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a07180    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n07230    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a07230    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n07240    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a07240    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n07220    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a07220    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n07260    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a07260    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n09400    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a09400    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n85770    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a85770    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n85775    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a85775    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n09750    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a09750    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n10600    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a10600    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n59660    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a59660    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n59720    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a59720    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n11070    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a11070    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n10960    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a10960    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n11560    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a11560    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n06500    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a06500    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n10300    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a10300    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n85530    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a85530    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n85300    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a85300    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n11901    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a11901    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( n11902    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+		,	REGEXP_REPLACE( a11902    , '[^a-zA-Z0-9]+', '' )	::BIGINT
+	FROM
+		whaight.BHI_ref_taxes_st_raw
+);
+--ANALYZE COMPRESSION		whaight.BHI_ref_taxes_st;
+ANALYZE					whaight.BHI_ref_taxes_st;
+VACUUM SORT ONLY		whaight.BHI_ref_taxes_st;
+ANALYZE					whaight.BHI_ref_taxes_st;
+
+</SQL>
+    <Name>ref-Taxes-st</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <SQL>/********************************************************************************/
+/*																				*/
+/*	FILE:			BHI_ref_taxes.sql											*/
+/*	PROGRAMMED BY:	Will Haight (wthii)											*/
+/*	DATE:			February, 2019												*/
+/*	NOTES:			The following tables are established in this file:			*/
+/*					whaight.BHI_ref_taxes_cy.sql								*/
+/*																				*/
+/*	MODIFICATIONS																*/
+/*																				*/
+/*		1.	BY:		wthii														*/
+/*			DATE:	2/18/2019													*/
+/*			NOTES:	Initial table establishment									*/
+/*																				*/
+/********************************************************************************/
+
+
+
+/********************************************************************************/
+/*																				*/
+/*	The DROP &amp; CREATE below define the table for receiving the data from		*/
+/*	http://www.irs.gov															*/
+/*																				*/
+/********************************************************************************/
+DROP TABLE IF EXISTS	whaight.BHI_ref_taxes_cy_raw;
+CREATE TABLE			whaight.BHI_ref_taxes_cy_raw
+(		STATEFIPS	VARCHAR(  2 )	ENCODE	RAW
+	,	STATE		VARCHAR(  2 )	ENCODE	RAW
+	,	COUNTYFIPS	VARCHAR(  3 )	ENCODE	RAW
+	,	COUNTYNAME	VARCHAR( 20 )	ENCODE	RAW
+	,	agi_stub	VARCHAR(  1 )	ENCODE	RAW
+	,	N1			VARCHAR(  9 )	ENCODE	RAW
+	,	mars1		VARCHAR(  9 )	ENCODE	RAW
+	,	MARS2		VARCHAR(  9 )	ENCODE	RAW
+	,	MARS4		VARCHAR(  9 )	ENCODE	RAW
+	,	PREP		VARCHAR(  9 )	ENCODE	RAW
+	,	N2			VARCHAR(  9 )	ENCODE	RAW
+	,	NUMDEP		VARCHAR(  9 )	ENCODE	RAW
+	,	TOTAL_VITA	VARCHAR(  9 )	ENCODE	RAW
+	,	VITA		VARCHAR(  9 )	ENCODE	RAW
+	,	TCE			VARCHAR(  9 )	ENCODE	RAW
+	,	VITA_EIC	VARCHAR(  9 )	ENCODE	RAW
+	,	RAL			VARCHAR(  9 )	ENCODE	RAW
+	,	RAC			VARCHAR(  9 )	ENCODE	RAW
+	,	ELDERLY		VARCHAR(  9 )	ENCODE	RAW
+	,	A00100		VARCHAR(  9 )	ENCODE	RAW
+	,	N02650		VARCHAR(  9 )	ENCODE	RAW
+	,	A02650		VARCHAR(  9 )	ENCODE	RAW
+	,	N00200		VARCHAR(  9 )	ENCODE	RAW
+	,	A00200		VARCHAR(  9 )	ENCODE	RAW
+	,	N00300		VARCHAR(  9 )	ENCODE	RAW
+	,	A00300		VARCHAR(  9 )	ENCODE	RAW
+	,	N00600		VARCHAR(  9 )	ENCODE	RAW
+	,	A00600		VARCHAR(  9 )	ENCODE	RAW
+	,	N00650		VARCHAR(  9 )	ENCODE	RAW
+	,	A00650		VARCHAR(  9 )	ENCODE	RAW
+	,	N00700		VARCHAR(  9 )	ENCODE	RAW
+	,	A00700		VARCHAR(  9 )	ENCODE	RAW
+	,	N00900		VARCHAR(  9 )	ENCODE	RAW
+	,	A00900		VARCHAR(  9 )	ENCODE	RAW
+	,	N01000		VARCHAR(  9 )	ENCODE	RAW
+	,	A01000		VARCHAR(  9 )	ENCODE	RAW
+	,	N01400		VARCHAR(  9 )	ENCODE	RAW
+	,	A01400		VARCHAR(  9 )	ENCODE	RAW
+	,	N01700		VARCHAR(  9 )	ENCODE	RAW
+	,	A01700		VARCHAR(  9 )	ENCODE	RAW
+	,	SCHF		VARCHAR(  9 )	ENCODE	RAW
+	,	N02300		VARCHAR(  9 )	ENCODE	RAW
+	,	A02300		VARCHAR(  9 )	ENCODE	RAW
+	,	N02500		VARCHAR(  9 )	ENCODE	RAW
+	,	A02500		VARCHAR(  9 )	ENCODE	RAW
+	,	N26270		VARCHAR(  9 )	ENCODE	RAW
+	,	A26270		VARCHAR(  9 )	ENCODE	RAW
+	,	N02900		VARCHAR(  9 )	ENCODE	RAW
+	,	A02900		VARCHAR(  9 )	ENCODE	RAW
+	,	N03220		VARCHAR(  9 )	ENCODE	RAW
+	,	A03220		VARCHAR(  9 )	ENCODE	RAW
+	,	N03300		VARCHAR(  9 )	ENCODE	RAW
+	,	A03300		VARCHAR(  9 )	ENCODE	RAW
+	,	N03270		VARCHAR(  9 )	ENCODE	RAW
+	,	A03270		VARCHAR(  9 )	ENCODE	RAW
+	,	N03150		VARCHAR(  9 )	ENCODE	RAW
+	,	A03150		VARCHAR(  9 )	ENCODE	RAW
+	,	N03210		VARCHAR(  9 )	ENCODE	RAW
+	,	A03210		VARCHAR(  9 )	ENCODE	RAW
+	,	N03230		VARCHAR(  9 )	ENCODE	RAW
+	,	A03230		VARCHAR(  9 )	ENCODE	RAW
+	,	N03240		VARCHAR(  9 )	ENCODE	RAW
+	,	A03240		VARCHAR(  9 )	ENCODE	RAW
+	,	N04470		VARCHAR(  9 )	ENCODE	RAW
+	,	A04470		VARCHAR(  9 )	ENCODE	RAW
+	,	A00101		VARCHAR(  9 )	ENCODE	RAW
+	,	N17000		VARCHAR(  9 )	ENCODE	RAW
+	,	A17000		VARCHAR(  9 )	ENCODE	RAW
+	,	N18425		VARCHAR(  9 )	ENCODE	RAW
+	,	A18425		VARCHAR(  9 )	ENCODE	RAW
+	,	N18450		VARCHAR(  9 )	ENCODE	RAW
+	,	A18450		VARCHAR(  9 )	ENCODE	RAW
+	,	N18500		VARCHAR(  9 )	ENCODE	RAW
+	,	A18500		VARCHAR(  9 )	ENCODE	RAW
+	,	N18800		VARCHAR(  9 )	ENCODE	RAW
+	,	A18800		VARCHAR(  9 )	ENCODE	RAW
+	,	N18300		VARCHAR(  9 )	ENCODE	RAW
+	,	A18300		VARCHAR(  9 )	ENCODE	RAW
+	,	N19300		VARCHAR(  9 )	ENCODE	RAW
+	,	A19300		VARCHAR(  9 )	ENCODE	RAW
+	,	N19500		VARCHAR(  9 )	ENCODE	RAW
+	,	A19500		VARCHAR(  9 )	ENCODE	RAW
+	,	N19530		VARCHAR(  9 )	ENCODE	RAW
+	,	A19530		VARCHAR(  9 )	ENCODE	RAW
+	,	N19550		VARCHAR(  9 )	ENCODE	RAW
+	,	A19550		VARCHAR(  9 )	ENCODE	RAW
+	,	N19570		VARCHAR(  9 )	ENCODE	RAW
+	,	A19570		VARCHAR(  9 )	ENCODE	RAW
+	,	N19700		VARCHAR(  9 )	ENCODE	RAW
+	,	A19700		VARCHAR(  9 )	ENCODE	RAW
+	,	N20800		VARCHAR(  9 )	ENCODE	RAW
+	,	A20800		VARCHAR(  9 )	ENCODE	RAW
+	,	N21020		VARCHAR(  9 )	ENCODE	RAW
+	,	A21020		VARCHAR(  9 )	ENCODE	RAW
+	,	N04800		VARCHAR(  9 )	ENCODE	RAW
+	,	A04800		VARCHAR(  9 )	ENCODE	RAW
+	,	N05800		VARCHAR(  9 )	ENCODE	RAW
+	,	A05800		VARCHAR(  9 )	ENCODE	RAW
+	,	N09600		VARCHAR(  9 )	ENCODE	RAW
+	,	A09600		VARCHAR(  9 )	ENCODE	RAW
+	,	N05780		VARCHAR(  9 )	ENCODE	RAW
+	,	A05780		VARCHAR(  9 )	ENCODE	RAW
+	,	N07100		VARCHAR(  9 )	ENCODE	RAW
+	,	A07100		VARCHAR(  9 )	ENCODE	RAW
+	,	N07300		VARCHAR(  9 )	ENCODE	RAW
+	,	A07300		VARCHAR(  9 )	ENCODE	RAW
+	,	N07180		VARCHAR(  9 )	ENCODE	RAW
+	,	A07180		VARCHAR(  9 )	ENCODE	RAW
+	,	N07230		VARCHAR(  9 )	ENCODE	RAW
+	,	A07230		VARCHAR(  9 )	ENCODE	RAW
+	,	N07240		VARCHAR(  9 )	ENCODE	RAW
+	,	A07240		VARCHAR(  9 )	ENCODE	RAW
+	,	N07220		VARCHAR(  9 )	ENCODE	RAW
+	,	A07220		VARCHAR(  9 )	ENCODE	RAW
+	,	N07260		VARCHAR(  9 )	ENCODE	RAW
+	,	A07260		VARCHAR(  9 )	ENCODE	RAW
+	,	N09400		VARCHAR(  9 )	ENCODE	RAW
+	,	A09400		VARCHAR(  9 )	ENCODE	RAW
+	,	N85770		VARCHAR(  9 )	ENCODE	RAW
+	,	A85770		VARCHAR(  9 )	ENCODE	RAW
+	,	N85775		VARCHAR(  9 )	ENCODE	RAW
+	,	A85775		VARCHAR(  9 )	ENCODE	RAW
+	,	N09750		VARCHAR(  9 )	ENCODE	RAW
+	,	A09750		VARCHAR(  9 )	ENCODE	RAW
+	,	N10600		VARCHAR(  9 )	ENCODE	RAW
+	,	A10600		VARCHAR(  9 )	ENCODE	RAW
+	,	N59660		VARCHAR(  9 )	ENCODE	RAW
+	,	A59660		VARCHAR(  9 )	ENCODE	RAW
+	,	N59720		VARCHAR(  9 )	ENCODE	RAW
+	,	A59720		VARCHAR(  9 )	ENCODE	RAW
+	,	N11070		VARCHAR(  9 )	ENCODE	RAW
+	,	A11070		VARCHAR(  9 )	ENCODE	RAW
+	,	N10960		VARCHAR(  9 )	ENCODE	RAW
+	,	A10960		VARCHAR(  9 )	ENCODE	RAW
+	,	N11560		VARCHAR(  9 )	ENCODE	RAW
+	,	A11560		VARCHAR(  9 )	ENCODE	RAW
+	,	N06500		VARCHAR(  9 )	ENCODE	RAW
+	,	A06500		VARCHAR(  9 )	ENCODE	RAW
+	,	N10300		VARCHAR(  9 )	ENCODE	RAW
+	,	A10300		VARCHAR(  9 )	ENCODE	RAW
+	,	N85530		VARCHAR(  9 )	ENCODE	RAW
+	,	A85530		VARCHAR(  9 )	ENCODE	RAW
+	,	N85300		VARCHAR(  9 )	ENCODE	RAW
+	,	A85300		VARCHAR(  9 )	ENCODE	RAW
+	,	N11901		VARCHAR(  9 )	ENCODE	RAW
+	,	A11901		VARCHAR(  9 )	ENCODE	RAW
+	,	N11902		VARCHAR(  9 )	ENCODE	RAW
+	,	A11902		VARCHAR(  9 )	ENCODE	RAW
+)
+COMPOUND SORTKEY(
+		STATEFIPS
+	,	STATE
+	,	COUNTYFIPS
+);
+
+
+
+/********************************************************************************/
+/*																				*/
+/*	This command copies raw data from an S3 bucket at amazon into the table		*/
+/*	whaight.BHI_ref_taxes.  													*/
+/*																				*/
+/********************************************************************************/
+COPY		whaight.BHI_ref_taxes_cy_raw
+FROM		's3://dhp-randlab-s3/users/whaight/16incyallagi.txt'
+credentials 'aws_iam_role=arn:aws:iam::722648170004:role/Data_Wranglers'
+ACCEPTANYDATE ACCEPTINVCHARS '^' BLANKSASNULL EMPTYASNULL NULL AS 'NULL' IGNOREBLANKLINES DATEFORMAT 'auto'
+IGNOREHEADER 1 TRIMBLANKS DELIMITER '\t' STATUPDATE ON MAXERROR 0 COMPUPDATE ON;
+
+select	* from	stl_load_errors	order by starttime desc;
+
+--ANALYZE COMPRESSION	whaight.BHI_ref_taxes_cy_raw;
+ANALYZE				whaight.BHI_ref_taxes_cy_raw;
+VACUUM SORT ONLY	whaight.BHI_ref_taxes_cy_raw;
+ANALYZE				whaight.BHI_ref_taxes_cy_raw ;
+
+
+
+SELECT
+		MAX( LEN( 	STATEFIPS	 ) )	AS	STATEFIPS
+	,	MAX( LEN( 	STATE	 ) )	AS	STATE
+	,	MAX( LEN( 	COUNTYFIPS	 ) )	AS	COUNTYFIPS
+	,	MAX( LEN( 	COUNTYNAME	 ) )	AS	COUNTYNAME
+	,	MAX( LEN( 	agi_stub	 ) )	AS	agi_stub
+	,	MAX( LEN( 	N1	 ) )	AS	N1
+	,	MAX( LEN( 	mars1	 ) )	AS	mars1
+	,	MAX( LEN( 	MARS2	 ) )	AS	MARS2
+	,	MAX( LEN( 	MARS4	 ) )	AS	MARS4
+	,	MAX( LEN( 	PREP	 ) )	AS	PREP
+	,	MAX( LEN( 	N2	 ) )	AS	N2
+	,	MAX( LEN( 	NUMDEP	 ) )	AS	NUMDEP
+	,	MAX( LEN( 	TOTAL_VITA	 ) )	AS	TOTAL_VITA
+	,	MAX( LEN( 	VITA	 ) )	AS	VITA
+	,	MAX( LEN( 	TCE	 ) )	AS	TCE
+	,	MAX( LEN( 	VITA_EIC	 ) )	AS	VITA_EIC
+	,	MAX( LEN( 	RAL	 ) )	AS	RAL
+	,	MAX( LEN( 	RAC	 ) )	AS	RAC
+	,	MAX( LEN( 	ELDERLY	 ) )	AS	ELDERLY
+	,	MAX( LEN( 	A00100	 ) )	AS	A00100
+	,	MAX( LEN( 	N02650	 ) )	AS	N02650
+	,	MAX( LEN( 	A02650	 ) )	AS	A02650
+	,	MAX( LEN( 	N00200	 ) )	AS	N00200
+	,	MAX( LEN( 	A00200	 ) )	AS	A00200
+	,	MAX( LEN( 	N00300	 ) )	AS	N00300
+	,	MAX( LEN( 	A00300	 ) )	AS	A00300
+	,	MAX( LEN( 	N00600	 ) )	AS	N00600
+	,	MAX( LEN( 	A00600	 ) )	AS	A00600
+	,	MAX( LEN( 	N00650	 ) )	AS	N00650
+	,	MAX( LEN( 	A00650	 ) )	AS	A00650
+	,	MAX( LEN( 	N00700	 ) )	AS	N00700
+	,	MAX( LEN( 	A00700	 ) )	AS	A00700
+	,	MAX( LEN( 	N00900	 ) )	AS	N00900
+	,	MAX( LEN( 	A00900	 ) )	AS	A00900
+	,	MAX( LEN( 	N01000	 ) )	AS	N01000
+	,	MAX( LEN( 	A01000	 ) )	AS	A01000
+	,	MAX( LEN( 	N01400	 ) )	AS	N01400
+	,	MAX( LEN( 	A01400	 ) )	AS	A01400
+	,	MAX( LEN( 	N01700	 ) )	AS	N01700
+	,	MAX( LEN( 	A01700	 ) )	AS	A01700
+	,	MAX( LEN( 	SCHF	 ) )	AS	SCHF
+	,	MAX( LEN( 	N02300	 ) )	AS	N02300
+	,	MAX( LEN( 	A02300	 ) )	AS	A02300
+	,	MAX( LEN( 	N02500	 ) )	AS	N02500
+	,	MAX( LEN( 	A02500	 ) )	AS	A02500
+	,	MAX( LEN( 	N26270	 ) )	AS	N26270
+	,	MAX( LEN( 	A26270	 ) )	AS	A26270
+	,	MAX( LEN( 	N02900	 ) )	AS	N02900
+	,	MAX( LEN( 	A02900	 ) )	AS	A02900
+	,	MAX( LEN( 	N03220	 ) )	AS	N03220
+	,	MAX( LEN( 	A03220	 ) )	AS	A03220
+	,	MAX( LEN( 	N03300	 ) )	AS	N03300
+	,	MAX( LEN( 	A03300	 ) )	AS	A03300
+	,	MAX( LEN( 	N03270	 ) )	AS	N03270
+	,	MAX( LEN( 	A03270	 ) )	AS	A03270
+	,	MAX( LEN( 	N03150	 ) )	AS	N03150
+	,	MAX( LEN( 	A03150	 ) )	AS	A03150
+	,	MAX( LEN( 	N03210	 ) )	AS	N03210
+	,	MAX( LEN( 	A03210	 ) )	AS	A03210
+	,	MAX( LEN( 	N03230	 ) )	AS	N03230
+	,	MAX( LEN( 	A03230	 ) )	AS	A03230
+	,	MAX( LEN( 	N03240	 ) )	AS	N03240
+	,	MAX( LEN( 	A03240	 ) )	AS	A03240
+	,	MAX( LEN( 	N04470	 ) )	AS	N04470
+	,	MAX( LEN( 	A04470	 ) )	AS	A04470
+	,	MAX( LEN( 	A00101	 ) )	AS	A00101
+	,	MAX( LEN( 	N17000	 ) )	AS	N17000
+	,	MAX( LEN( 	A17000	 ) )	AS	A17000
+	,	MAX( LEN( 	N18425	 ) )	AS	N18425
+	,	MAX( LEN( 	A18425	 ) )	AS	A18425
+	,	MAX( LEN( 	N18450	 ) )	AS	N18450
+	,	MAX( LEN( 	A18450	 ) )	AS	A18450
+	,	MAX( LEN( 	N18500	 ) )	AS	N18500
+	,	MAX( LEN( 	A18500	 ) )	AS	A18500
+	,	MAX( LEN( 	N18800	 ) )	AS	N18800
+	,	MAX( LEN( 	A18800	 ) )	AS	A18800
+	,	MAX( LEN( 	N18300	 ) )	AS	N18300
+	,	MAX( LEN( 	A18300	 ) )	AS	A18300
+	,	MAX( LEN( 	N19300	 ) )	AS	N19300
+	,	MAX( LEN( 	A19300	 ) )	AS	A19300
+	,	MAX( LEN( 	N19500	 ) )	AS	N19500
+	,	MAX( LEN( 	A19500	 ) )	AS	A19500
+	,	MAX( LEN( 	N19530	 ) )	AS	N19530
+	,	MAX( LEN( 	A19530	 ) )	AS	A19530
+	,	MAX( LEN( 	N19550	 ) )	AS	N19550
+	,	MAX( LEN( 	A19550	 ) )	AS	A19550
+	,	MAX( LEN( 	N19570	 ) )	AS	N19570
+	,	MAX( LEN( 	A19570	 ) )	AS	A19570
+	,	MAX( LEN( 	N19700	 ) )	AS	N19700
+	,	MAX( LEN( 	A19700	 ) )	AS	A19700
+	,	MAX( LEN( 	N20800	 ) )	AS	N20800
+	,	MAX( LEN( 	A20800	 ) )	AS	A20800
+	,	MAX( LEN( 	N21020	 ) )	AS	N21020
+	,	MAX( LEN( 	A21020	 ) )	AS	A21020
+	,	MAX( LEN( 	N04800	 ) )	AS	N04800
+	,	MAX( LEN( 	A04800	 ) )	AS	A04800
+	,	MAX( LEN( 	N05800	 ) )	AS	N05800
+	,	MAX( LEN( 	A05800	 ) )	AS	A05800
+	,	MAX( LEN( 	N09600	 ) )	AS	N09600
+	,	MAX( LEN( 	A09600	 ) )	AS	A09600
+	,	MAX( LEN( 	N05780	 ) )	AS	N05780
+	,	MAX( LEN( 	A05780	 ) )	AS	A05780
+	,	MAX( LEN( 	N07100	 ) )	AS	N07100
+	,	MAX( LEN( 	A07100	 ) )	AS	A07100
+	,	MAX( LEN( 	N07300	 ) )	AS	N07300
+	,	MAX( LEN( 	A07300	 ) )	AS	A07300
+	,	MAX( LEN( 	N07180	 ) )	AS	N07180
+	,	MAX( LEN( 	A07180	 ) )	AS	A07180
+	,	MAX( LEN( 	N07230	 ) )	AS	N07230
+	,	MAX( LEN( 	A07230	 ) )	AS	A07230
+	,	MAX( LEN( 	N07240	 ) )	AS	N07240
+	,	MAX( LEN( 	A07240	 ) )	AS	A07240
+	,	MAX( LEN( 	N07220	 ) )	AS	N07220
+	,	MAX( LEN( 	A07220	 ) )	AS	A07220
+	,	MAX( LEN( 	N07260	 ) )	AS	N07260
+	,	MAX( LEN( 	A07260	 ) )	AS	A07260
+	,	MAX( LEN( 	N09400	 ) )	AS	N09400
+	,	MAX( LEN( 	A09400	 ) )	AS	A09400
+	,	MAX( LEN( 	N85770	 ) )	AS	N85770
+	,	MAX( LEN( 	A85770	 ) )	AS	A85770
+	,	MAX( LEN( 	N85775	 ) )	AS	N85775
+	,	MAX( LEN( 	A85775	 ) )	AS	A85775
+	,	MAX( LEN( 	N09750	 ) )	AS	N09750
+	,	MAX( LEN( 	A09750	 ) )	AS	A09750
+	,	MAX( LEN( 	N10600	 ) )	AS	N10600
+	,	MAX( LEN( 	A10600	 ) )	AS	A10600
+	,	MAX( LEN( 	N59660	 ) )	AS	N59660
+	,	MAX( LEN( 	A59660	 ) )	AS	A59660
+	,	MAX( LEN( 	N59720	 ) )	AS	N59720
+	,	MAX( LEN( 	A59720	 ) )	AS	A59720
+	,	MAX( LEN( 	N11070	 ) )	AS	N11070
+	,	MAX( LEN( 	A11070	 ) )	AS	A11070
+	,	MAX( LEN( 	N10960	 ) )	AS	N10960
+	,	MAX( LEN( 	A10960	 ) )	AS	A10960
+	,	MAX( LEN( 	N11560	 ) )	AS	N11560
+	,	MAX( LEN( 	A11560	 ) )	AS	A11560
+	,	MAX( LEN( 	N06500	 ) )	AS	N06500
+	,	MAX( LEN( 	A06500	 ) )	AS	A06500
+	,	MAX( LEN( 	N10300	 ) )	AS	N10300
+	,	MAX( LEN( 	A10300	 ) )	AS	A10300
+	,	MAX( LEN( 	N85530	 ) )	AS	N85530
+	,	MAX( LEN( 	A85530	 ) )	AS	A85530
+	,	MAX( LEN( 	N85300	 ) )	AS	N85300
+	,	MAX( LEN( 	A85300	 ) )	AS	A85300
+	,	MAX( LEN( 	N11901	 ) )	AS	N11901
+	,	MAX( LEN( 	A11901	 ) )	AS	A11901
+	,	MAX( LEN( 	N11902	 ) )	AS	N11902
+	,	MAX( LEN( 	A11902	 ) )	AS	A11902
+FROM	whaight.BHI_ref_taxes_cy_raw;
+</SQL>
+    <Name>ref-Taxes-cy</Name>
+  </Query>
+  <Query IsView="False" IsSP="False">
+    <SQL>/********************************************************************************/
+/*																				*/
+/*	FILE:			BHI_ref_ICD10.sql											*/
+/*	PROGRAMMED BY:	Will Haight (wthii)											*/
+/*	DATE:			February, 2019												*/
+/*	NOTES:			The following tables are established in this file:			*/
+/*																				*/
+/*		whaight.BHI_ICD10_raw		--	raw file uploaded from S3 bucket.		*/
+/*		whaight.BHI_ICD10			--	order_num converted to INTEGER			*/
+/*		whaight.BHI_ICD10_addenda	--	raw file of addenda						*/
+/*		whaight.BHI_addendum_codes	--	list of ICD10s in addenda table			*/
+/*		whaight.BHI_ICD10_add		--	file after addenda are processed		*/
+/*																				*/
+/*																				*/
+/*																				*/
+/*																				*/
+/*																				*/
+/*																				*/
+/*	MODIFICATIONS																*/
+/*																				*/
+/*		1.	BY:		wthii														*/
+/*			DATE:	2/19/2019													*/
+/*			NOTES:	Initial table establishment									*/
+/*																				*/
+/********************************************************************************/
+
+
+
+/********************************************************************************/
+/*																				*/
+/*	The DROP &amp; CREATE below define the table for receiving the data from		*/
+/*	http://www.cdc.gov															*/
+/*																				*/
+/********************************************************************************/
+DROP TABLE IF EXISTS	whaight.BHI_ICD10_raw;
+CREATE TABLE			whaight.BHI_ICD10_raw
+(		order_num		VARCHAR(   5 )	ENCODE	RAW
+	,	ICD10_code		VARCHAR(   7 )	ENCODE	RAW
+	,	hipaa_valid		VARCHAR(   1 )	ENCODE	RAW
+	,	short_desc		VARCHAR(  62 )	ENCODE	ZSTD
+	,	long_desc		VARCHAR( 230 )	ENCODE	ZSTD
+)
+COMPOUND SORTKEY(
+	ICD10_code
+);
+
+
+
+/********************************************************************************/
+/*																				*/
+/*	This command copies raw data from an S3 bucket at amazon into the table		*/
+/*	whaight.BHI_ref_taxes.  													*/
+/*																				*/
+/********************************************************************************/
+COPY		whaight.BHI_ICD10_raw
+FROM		's3://dhp-randlab-s3/users/whaight/icd10cm_order_2019.txt'
+credentials 'aws_iam_role=arn:aws:iam::722648170004:role/Data_Wranglers'
+ACCEPTANYDATE ACCEPTINVCHARS '^' BLANKSASNULL EMPTYASNULL NULL AS 'NULL' IGNOREBLANKLINES DATEFORMAT 'auto'
+IGNOREHEADER 0 TRIMBLANKS DELIMITER '\t' STATUPDATE ON MAXERROR 0 COMPUPDATE ON;
+
+--select	* from	stl_load_errors	order by starttime desc;
+
+--ANALYZE COMPRESSION	whaight.BHI_ICD10_raw;
+ANALYZE				whaight.BHI_ICD10_raw;
+VACUUM SORT ONLY	whaight.BHI_ICD10_raw;
+ANALYZE				whaight.BHI_ICD10_raw;
+
+
+
+SELECT		*
+FROM		whaight.BHI_ICD10_raw
+ORDER BY	order_num	ASC
+LIMIT		1000;
+
+
+
+DROP TABLE IF EXISTS	whaight.BHI_ICD10;
+CREATE TABLE			whaight.BHI_ICD10
+(		order_num		INTEGER			ENCODE	RAW
+	,	ICD10_code		VARCHAR(   7 )	ENCODE	RAW
+	,	hipaa_valid		VARCHAR(   1 )	ENCODE	RAW
+	,	short_desc		VARCHAR(  62 )	ENCODE	ZSTD
+	,	long_desc		VARCHAR( 230 )	ENCODE	ZSTD
+)
+COMPOUND SORTKEY(
+	ICD10_code
+);
+
+
+INSERT INTO	whaight.BHI_ICD10
+(	SELECT
+			order_num		::INTEGER
+		,	ICD10_code		::VARCHAR(   7 )
+		,	hipaa_valid		::VARCHAR(   1 )
+		,	short_desc		::VARCHAR(  62 )
+		,	long_desc		::VARCHAR( 230 )
+	FROM
+		whaight.BHI_ICD10_raw
+);
+--ANALYZE COMPRESSION	whaight.BHI_ICD10;
+ANALYZE				whaight.BHI_ICD10;
+VACUUM SORT ONLY	whaight.BHI_ICD10;
+ANALYZE				whaight.BHI_ICD10;
+
+
+
+SELECT		COUNT( * )
+FROM		whaight.BHI_ICD10
+;
+/*	94,444	*/
+
+
+
+SELECT		COUNT( * )
+FROM		(	SELECT DISTINCT	ICD10_code
+				FROM			whaight.BHI_ICD10	)
+;
+/*	94,444	*/
+
+
+/********************************************************************************/
+/*																				*/
+/*	The DROP &amp; CREATE below define the table for receiving the addenda to the	*/
+/*	order table (above) from http://www.cdc.gov									*/
+/*																				*/
+/********************************************************************************/
+DROP TABLE IF EXISTS	whaight.BHI_ICD10_addenda;
+CREATE TABLE			whaight.BHI_ICD10_addenda
+(		instruction		VARCHAR(  20 )	ENCODE	RAW
+	,	hipaa_valid		VARCHAR(   2 )	ENCODE	RAW
+	,	ICD10_code		VARCHAR(   7 )	ENCODE	RAW
+	,	short_desc		VARCHAR(  62 )	ENCODE	RAW
+	,	long_desc		VARCHAR( 230 )	ENCODE	RAW
+)
+COMPOUND SORTKEY(
+	ICD10_code
+);
+
+COPY		whaight.BHI_ICD10_addenda
+FROM		's3://dhp-randlab-s3/users/whaight/icd10cm_order_addenda_2019.txt'
+credentials 'aws_iam_role=arn:aws:iam::722648170004:role/Data_Wranglers'
+ACCEPTANYDATE ACCEPTINVCHARS '^' BLANKSASNULL EMPTYASNULL NULL AS 'NULL' IGNOREBLANKLINES DATEFORMAT 'auto'
+IGNOREHEADER 0 TRIMBLANKS DELIMITER '\t' STATUPDATE ON MAXERROR 0 COMPUPDATE ON;
+
+--select	* from	stl_load_errors	order by starttime desc;
+
+--ANALYZE COMPRESSION	whaight.BHI_ICD10_addenda;
+ANALYZE				whaight.BHI_ICD10_addenda;
+VACUUM SORT ONLY	whaight.BHI_ICD10_addenda;
+ANALYZE				whaight.BHI_ICD10_addenda;
+
+
+SELECT		*
+FROM		whaight.BHI_ICD10_addenda
+ORDER BY	ICD10_code	ASC
+LIMIT		1000;
+
+
+
+SELECT		COUNT( * )
+FROM		whaight.BHI_ICD10_addenda
+WHERE		instruction = 'Add:'
+;
+/*	368	*/
+
+
+
+SELECT		COUNT( * )
+FROM		whaight.BHI_ICD10_addenda
+WHERE		instruction = 'Delete:'
+;
+/*	51	*/
+
+
+
+SELECT		COUNT( * )
+FROM		whaight.BHI_ICD10_addenda
+WHERE		instruction = 'Revise to:'
+;
+/*	172	*/
+
+
+
+SELECT		COUNT( * )
+FROM		whaight.BHI_ICD10_addenda
+WHERE		instruction = 'Revise from:'
+;
+/*	172	*/
+
+
+
+SELECT		COUNT( * )
+FROM		whaight.BHI_ICD10_addenda
+;
+/*	763	*/
+
+
+SELECT DISTINCT	instruction
+FROM			whaight.BHI_ICD10_addenda;
+/*
+instruction
+Add:
+Revise to:
+Revise from:
+Delete:
+*/
+
+
+
+
+
+
+DROP TABLE IF EXISTS	whaight.BHI_addendum_codes;
+SELECT DISTINCT	ICD10_Code
+INTO			whaight.BHI_addendum_codes
+FROM			whaight.BHI_ICD10_addenda
+;
+ANALYZE				whaight.BHI_addendum_codes;
+VACUUM SORT ONLY	whaight.BHI_addendum_codes;
+ANALYZE				whaight.BHI_addendum_codes;
+
+
+
+
+
+
+
+
+
+DROP TABLE IF EXISTS	whaight.BHI_ICD10_add;
+CREATE TABLE			whaight.BHI_ICD10_add
+(		order_num		INTEGER			ENCODE	RAW
+	,	ICD10_code		VARCHAR(   7 )	ENCODE	RAW
+	,	hipaa_valid		VARCHAR(   1 )	ENCODE	RAW
+	,	short_desc		VARCHAR(  62 )	ENCODE	ZSTD
+	,	long_desc		VARCHAR( 230 )	ENCODE	ZSTD
+)
+COMPOUND SORTKEY(
+	ICD10_code
+);
+
+
+INSERT INTO	whaight.BHI_ICD10_add
+	(	SELECT
+				order_num					AS	order_num
+			,	CASE	instruction_flag	=	'0'
+					WHEN	TRUE	THEN	ICD10_code
+					ELSE					repl_ICD10_code
+				END							AS	ICD10_code
+			,	CASE	instruction_flag	=	'0'
+					WHEN	TRUE	THEN	hipaa_valid
+					ELSE					repl_hipaa_valid
+				END							AS	hipaa_valid
+			,	CASE	instruction_flag	=	'0'
+					WHEN	TRUE	THEN	short_desc
+					ELSE					repl_short_desc
+				END							AS	short_desc
+			,	CASE	instruction_flag	=	'0'
+					WHEN	TRUE	THEN	long_desc
+					ELSE					repl_long_desc
+				END							AS	long_desc
+		FROM
+			(	SELECT		codes.order_num													AS	order_num
+						,	codes.ICD10_code												AS	ICD10_code
+						,	codes.hipaa_valid												AS	hipaa_valid
+						,	codes.short_desc												AS	short_desc
+						,	codes.long_desc													AS	long_desc
+						,	addenda.instruction												AS	instruction
+						,	( addenda.instruction	IS NOT NULL )	::INTEGER::VARCHAR( 1 )	AS	instruction_flag
+						,	addenda.hipaa_valid												AS	repl_hipaa_valid
+						,	addenda.ICD10_code												AS	repl_ICD10_code
+						,	addenda.short_desc												AS	repl_short_desc
+						,	addenda.long_desc												AS	repl_long_desc
+				FROM					whaight.BHI_ICD10			codes
+						FULL OUTER JOIN	whaight.BHI_ICD10_addenda	addenda
+						ON				codes.ICD10_code	=	addenda.ICD10_code
+			)
+		WHERE
+				instruction	NOT IN	(	'Revise from:',	'Delete:'	)
+			OR	instruction IS NULL
+		ORDER BY
+			ICD10_code	ASC
+);
+--ANALYZE COMPRESSION	whaight.BHI_ICD10_add;
+ANALYZE				whaight.BHI_ICD10_add;
+VACUUM SORT ONLY	whaight.BHI_ICD10_add;
+ANALYZE				whaight.BHI_ICD10_add;
+
+
+  
+SELECT		COUNT( * )
+FROM		whaight.BHI_ICD10_add
+;
+/*	94,444	*/
+
+
+
+
+SELECT		*
+FROM		whaight.BHI_ICD10_addenda
+WHERE		instruction IN	( 'Add:', 'Delete:' )
+ORDER BY	ICD10_code	ASC
+;
+/*	419	*/
+
+
+
+SELECT	*
+FROM
+	(	SELECT			codes.order_num													AS	order_num
+					,	codes.ICD10_code												AS	ICD10_code
+					,	codes.hipaa_valid												AS	hipaa_valid
+					,	codes.short_desc												AS	short_desc
+					,	codes.long_desc													AS	long_desc
+					,	addenda.instruction												AS	instruction
+					,	( addenda.instruction	IS NOT NULL )	::INTEGER::VARCHAR( 1 )	AS	instruction_flag
+					,	addenda.hipaa_valid												AS	repl_hipaa_valid
+					,	addenda.ICD10_code												AS	repl_ICD10_code
+					,	addenda.short_desc												AS	repl_short_desc
+					,	addenda.long_desc												AS	repl_long_desc
+		FROM						whaight.BHI_ICD10			codes
+					FULL OUTER JOIN	whaight.BHI_ICD10_addenda	addenda
+					ON				codes.ICD10_code	=	addenda.ICD10_code
+	)
+WHERE
+	ICD10_code	=	ANY(	SELECT	ICD10_code	FROM	whaight.BHI_addendum_codes	)
+ORDER BY
+		ICD10_code	ASC
+	,	instruction	ASC
+;
+/*	760	*/
+
+
+
+SELECT
+	COUNT( * )
+FROM
+	(	SELECT DISTINCT	
+			ICD10_code
+		FROM
+			(	SELECT			codes.order_num							AS	order_num
+							,	codes.ICD10_code						AS	ICD10_code
+							,	codes.hipaa_valid						AS	hipaa_valid
+							,	codes.short_desc						AS	short_desc
+							,	codes.long_desc							AS	long_desc
+							,	addenda.instruction						AS	instruction
+							,	( addenda.instruction	IS NOT NULL )
+												::INTEGER::VARCHAR( 1 )	AS	instruction_flag
+							,	addenda.hipaa_valid						AS	repl_hipaa_valid
+							,	addenda.ICD10_code						AS	repl_ICD10_code
+							,	addenda.short_desc						AS	repl_short_desc
+							,	addenda.long_desc						AS	repl_long_desc
+				FROM						whaight.BHI_ICD10			codes
+							FULL OUTER JOIN	whaight.BHI_ICD10_addenda	addenda
+							ON				codes.ICD10_code	=	addenda.ICD10_code
+			)
+	)
+;
+/*	94,445	*/
+
+
+
+SELECT	COUNT( * )
+FROM	(	SELECT DISTINCT	ICD10_code
+			FROM			whaight.BHI_ICD10_add	
+			WHERE	ICD10_code NOT IN(	SELECT DISTINCT	ICD10_code
+										FROM			whaight.BHI_ICD10	)
+		)
+;
+/*	0	*/
+
+
+
+SELECT	COUNT( * )
+FROM	(	SELECT DISTINCT	ICD10_code
+			FROM			whaight.BHI_ICD10	
+			WHERE	ICD10_code NOT IN(	SELECT DISTINCT	ICD10_code
+										FROM			whaight.BHI_ICD10_add	)
+		)
+;
+/*	0	*/
+
+
+
+SELECT	COUNT( * )
+FROM	whaight.BHI_addendum_codes
+WHERE	ICD10_code NOT IN(	SELECT DISTINCT	ICD10_code
+							FROM			whaight.BHI_ICD10_add	)
+;
+/*	3	*/
+
+
+
+SELECT	ICD10_code
+FROM	whaight.BHI_addendum_codes
+WHERE	ICD10_code NOT IN(	SELECT DISTINCT	ICD10_code
+							FROM			whaight.BHI_ICD10_add	)
+;
+/*	
+'T814XXA'
+'T814XXD'
+'T814XXS'
+*/
+
+
+SELECT	*
+FROM	(	SELECT		codes.order_num													AS	order_num
+					,	codes.ICD10_code												AS	ICD10_code
+					,	codes.hipaa_valid												AS	hipaa_valid
+					,	codes.short_desc												AS	short_desc
+					,	codes.long_desc													AS	long_desc
+					,	addenda.instruction												AS	instruction
+					,	( addenda.instruction	IS NOT NULL )	::INTEGER::VARCHAR( 1 )	AS	instruction_flag
+					,	addenda.hipaa_valid												AS	repl_hipaa_valid
+					,	addenda.ICD10_code												AS	repl_ICD10_code
+					,	addenda.short_desc												AS	repl_short_desc
+					,	addenda.long_desc												AS	repl_long_desc
+			FROM					whaight.BHI_ICD10			codes
+					FULL OUTER JOIN	whaight.BHI_ICD10_addenda	addenda
+					ON				codes.ICD10_code	=	addenda.ICD10_code
+		)
+WHERE	ICD10_code	IN	(	'T814XXA', 'T814XXD', 'T814XXS'	)
+;
+/*	empty	*/
+
+
+SELECT	*
+FROM	whaight.BHI_ICD10_addenda
+WHERE	ICD10_code	IN	(	'T814XXA', 'T814XXD', 'T814XXS'	)
+;
+/*
+instruction	hipaa_valid	icd10_code	short_desc												long_desc
+Delete:		1			T814XXS		"Infection following a procedure, sequela"				"Infection following a procedure, sequela"
+Delete:		1			T814XXA		"Infection following a procedure, initial encounter"	"Infection following a procedure, initial encounter"
+Delete:		1			T814XXD		"Infection following a procedure, subsequent encounter"	"Infection following a procedure, subsequent encounter"
+*/
+
+
+SELECT	*
+FROM	whaight.BHI_ICD10
+WHERE	ICD10_code	IN	(	'T814XXA', 'T814XXD', 'T814XXS'	)
+;
+/*	empty	*/
+
+</SQL>
+    <Name>ref-ICD_10</Name>
+  </Query>
+</QuerySet>
